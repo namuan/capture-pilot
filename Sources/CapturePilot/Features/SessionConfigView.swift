@@ -14,7 +14,7 @@ struct SessionConfigView: View {
                 ConfigurationView(captureEngine: captureEngine)
             }
         }
-        .frame(width: 900, height: 600, alignment: .topLeading)
+        .frame(width: 1050, height: 600, alignment: .topLeading)
         .onAppear {
             captureEngine.onCaptureStopped = {
                 dismiss()
@@ -121,7 +121,7 @@ private struct ConfigurationView: View {
     
     var body: some View {
         HStack(spacing: 20) {
-            // Left column - 40% width
+            // Left column - original width
             VStack(spacing: 20) {
                 CaptureSettingsSection(captureEngine: captureEngine)
                     .padding(16)
@@ -151,7 +151,7 @@ private struct ConfigurationView: View {
             }
             .frame(width: 280)
             
-            // Right column - 60% width
+            // Right column - expanded width for more applications
             VStack(spacing: 20) {
                 TargetSourceSection(captureEngine: captureEngine)
                     .padding(16)
@@ -424,7 +424,7 @@ private struct AppGridPicker: View {
                         .frame(maxWidth: .infinity, minHeight: 200)
                     }
                 } else {
-                    ScrollView {
+                     ScrollView {
                         LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                             ForEach(apps) { app in
                                 AppGridTile(
@@ -449,7 +449,7 @@ private struct AppGridPicker: View {
                         }
                         .padding(12)
                     }
-                    .frame(height: 260)
+                    .frame(height: 320)
                 }
             } label: {
                 HStack(spacing: 6) {

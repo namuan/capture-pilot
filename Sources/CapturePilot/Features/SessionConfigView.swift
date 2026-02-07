@@ -928,25 +928,23 @@ private struct StartCaptureButton: View {
         Button(action: {
             captureEngine.startCapture()
         }) {
-            HStack(spacing: 10) {
+            HStack(spacing: 6) {
                 Image(systemName: "play.fill")
-                    .font(.callout)
+                    .font(.caption)
                 Text("Start Capture")
                     .fontWeight(.semibold)
             }
-            .frame(minWidth: 160)
-            .padding(.vertical, 12)
+            .frame(minWidth: 120)
+            .padding(.vertical, 8)
         }
         .buttonStyle(.borderedProminent)
-        .controlSize(.large)
+        .controlSize(.small)
         .shadow(
             color: Color.accentColor.opacity(0.4),
-            radius: 8,
+            radius: 4,
             x: 0,
-            y: 4
+            y: 2
         )
-        .scaleEffect(1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: false)
     }
 }
 

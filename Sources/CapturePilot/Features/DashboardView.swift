@@ -214,13 +214,20 @@ struct DashboardView: View {
 struct SessionDetailView: View {
     let session: CaptureSession
     @State private var images: [URL] = []
-    @State private var selectedImage: URL? = nil
+    @State private var selectedImageIndex: Int? = nil
     @State private var isLoading = true
-    
+
     private let columns = [
         GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)
     ]
-    
+
+    private var selectedImageBinding: Binding<Int> {
+        Binding<Int>(
+            get: { selectedImageIndex ?? 0 },
+            set: { selectedImageIndex = $0 }
+        )
+    }
+
     var body: some View {
         ScrollView {
             if isLoading {
@@ -238,11 +245,11 @@ struct SessionDetailView: View {
                 .padding(.top, 100)
             } else {
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(images, id: \.self) { imageURL in
+                    ForEach(Array(images.enumerated()), id: \.element) { index, imageURL in
                         ScreenshotThumbnail(imageURL: imageURL)
                             .onTapGesture {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                    selectedImage = imageURL
+                                    selectedImageIndex = index
                                 }
                             }
                     }
@@ -267,8 +274,13 @@ struct SessionDetailView: View {
         .onChange(of: session.path) { _ in
             loadImages()
         }
-        .sheet(item: $selectedImage) { imageURL in
-            ImagePreviewView(imageURL: imageURL)
+        .sheet(isPresented: Binding(
+            get: { selectedImageIndex != nil },
+            set: { if !$0 { selectedImageIndex = nil } }
+        )) {
+            if selectedImageIndex != nil {
+                ImagePreviewView(images: images, currentIndex: selectedImageBinding)
+            }
         }
     }
     
@@ -375,12 +387,26 @@ struct ScreenshotThumbnail: View {
 }
 
 struct ImagePreviewView: View {
-    let imageURL: URL
+    let images: [URL]
+    @Binding var currentIndex: Int
     @Environment(\.dismiss) private var dismiss
     @State private var image: NSImage? = nil
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
-    
+    @State private var isTransitioning = false
+
+    private var currentImageURL: URL {
+        images[currentIndex]
+    }
+
+    private var canGoPrevious: Bool {
+        currentIndex > 0
+    }
+
+    private var canGoNext: Bool {
+        currentIndex < images.count - 1
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // macOS-style title bar
@@ -393,16 +419,39 @@ struct ImagePreviewView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                
+
                 Spacer()
-                
-                Text(imageURL.lastPathComponent)
-                    .font(.system(size: 13, weight: .semibold))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    
+
+                // Navigation controls
+                HStack(spacing: 16) {
+                    Button {
+                        goToPrevious()
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canGoPrevious)
+                    .keyboardShortcut(.leftArrow, modifiers: [])
+
+                    Text("\(currentIndex + 1) of \(images.count)")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 80)
+
+                    Button {
+                        goToNext()
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canGoNext)
+                    .keyboardShortcut(.rightArrow, modifiers: [])
+                }
+
                 Spacer()
-                
+
                 HStack(spacing: 12) {
                     Button {
                         let pasteboard = NSPasteboard.general
@@ -417,9 +466,9 @@ struct ImagePreviewView: View {
                     .buttonStyle(.plain)
                     .help("Copy Image")
                     .disabled(image == nil)
-                    
+
                     Button {
-                        NSWorkspace.shared.open(imageURL)
+                        NSWorkspace.shared.open(currentImageURL)
                     } label: {
                         Image(systemName: "arrow.up.right.square")
                             .font(.system(size: 16))
@@ -437,12 +486,12 @@ struct ImagePreviewView: View {
                     .foregroundColor(Color(nsColor: .separatorColor)),
                 alignment: .bottom
             )
-            
+
             // Image content fills all remaining space
             ZStack {
                 Color(nsColor: .underPageBackgroundColor)
-                
-                if let image = image {
+
+                if let image = image, !isTransitioning {
                     Image(nsImage: image)
                         .resizable()
                         .scaledToFit()
@@ -473,11 +522,48 @@ struct ImagePreviewView: View {
         .onAppear {
             loadImage()
         }
+        .onChange(of: currentIndex) { _ in
+            resetZoom()
+            loadImage()
+        }
     }
-    
+
+    private func goToPrevious() {
+        guard canGoPrevious, !isTransitioning else { return }
+        withAnimation(.easeInOut(duration: 0.15)) {
+            isTransitioning = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            currentIndex -= 1
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isTransitioning = false
+            }
+        }
+    }
+
+    private func goToNext() {
+        guard canGoNext, !isTransitioning else { return }
+        withAnimation(.easeInOut(duration: 0.15)) {
+            isTransitioning = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            currentIndex += 1
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isTransitioning = false
+            }
+        }
+    }
+
+    private func resetZoom() {
+        withAnimation(.spring()) {
+            scale = 1.0
+            lastScale = 1.0
+        }
+    }
+
     private func loadImage() {
         DispatchQueue.global(qos: .userInitiated).async {
-            if let image = NSImage(contentsOf: imageURL) {
+            if let image = NSImage(contentsOf: currentImageURL) {
                 DispatchQueue.main.async {
                     self.image = image
                 }

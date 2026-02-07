@@ -326,37 +326,23 @@ private struct TargetSourceSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Section header
-            HStack(spacing: 8) {
-                Image(systemName: "viewfinder")
-                    .font(.callout)
-                    .foregroundColor(.accentColor)
-                    .frame(width: 24, height: 24)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color.accentColor.opacity(0.15))
-                    )
-                
-                Text("Target Source")
-                    .font(.callout)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                
+            // Centered tabs
+            HStack {
+                Spacer()
+                Picker("Type:", selection: captureTypeBinding) {
+                    Label("Fullscreen", systemImage: "rectangle.fill")
+                        .tag("Fullscreen")
+                    Label("Application", systemImage: "app.fill")
+                        .tag("App")
+                    Label("Custom Area", systemImage: "crop")
+                        .tag("Custom")
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(height: 36)
+                .frame(maxWidth: 400)
                 Spacer()
             }
-            
-            // Tabs
-            Picker("Type:", selection: captureTypeBinding) {
-                Label("Fullscreen", systemImage: "rectangle.fill")
-                    .tag("Fullscreen")
-                Label("Application", systemImage: "app.fill")
-                    .tag("App")
-                Label("Custom Area", systemImage: "crop")
-                    .tag("Custom")
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(height: 36)
             
             // Tab content
             VStack(spacing: 0) {

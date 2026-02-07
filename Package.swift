@@ -11,10 +11,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "CapturePilot",
-            resources: [
-                .process("Resources")
-            ]
+            name: "CapturePilot"
         )
     ]
 )

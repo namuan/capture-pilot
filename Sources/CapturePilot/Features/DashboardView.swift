@@ -5,6 +5,7 @@ struct DashboardView: View {
     @State private var showingNewSession = false
     @State private var showingDeleteAlert = false
     @State private var sessionsToDelete: [CaptureSession]?
+    @State private var selectedSession: CaptureSession?
     
     // Fetch sessions
     // Note: Since we are not using standard Xcode gen, we might need a manual FetchRequest if the class isn't found, 
@@ -21,7 +22,7 @@ struct DashboardView: View {
         NavigationView {
             List {
                 ForEach(sessions, id: \.id) { session in
-                    NavigationLink(destination: SessionDetailView(session: session)) {
+                    NavigationLink(destination: SessionDetailView(session: session), tag: session, selection: $selectedSession) {
                         VStack(alignment: .leading) {
                             Text(session.date, style: .date)
                                 .font(.headline)
@@ -74,6 +75,10 @@ struct DashboardView: View {
     private func performDelete(_ sessions: [CaptureSession]) {
         withAnimation {
             for session in sessions {
+                if session == selectedSession {
+                    selectedSession = nil
+                }
+                
                 // Delete folder
                 let path = session.path
                 if !path.isEmpty && FileManager.default.fileExists(atPath: path) {

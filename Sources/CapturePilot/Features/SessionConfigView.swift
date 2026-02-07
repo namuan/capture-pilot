@@ -119,8 +119,6 @@ private struct ConfigurationView: View {
                     )
                 
                 Spacer(minLength: 20)
-                
-                StartCaptureButton(captureEngine: captureEngine)
             }
             .padding(20)
         }
@@ -280,7 +278,7 @@ private struct TargetSourceSection: View {
         )
     }
     
-    var body: some View {
+var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 Image(systemName: "viewfinder")
@@ -304,6 +302,8 @@ private struct TargetSourceSection: View {
                 .labelsHidden()
                 
                 Spacer()
+                
+                StartCaptureButton(captureEngine: captureEngine)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.bottom, 16)

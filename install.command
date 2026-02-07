@@ -27,8 +27,11 @@ RESOURCES_DIR="$CONTENTS_DIR/Resources"
 # Update instead of delete
 if [ -d "$APP_BUNDLE" ]; then
     echo "Updating existing app bundle..."
+    rm -f "$MACOS_DIR/$APP_NAME"
 else
     echo "Creating new app bundle..."
+    mkdir -p "$MACOS_DIR"
+    mkdir -p "$RESOURCES_DIR"
 fi
 
 mkdir -p "$MACOS_DIR"

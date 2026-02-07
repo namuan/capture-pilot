@@ -336,6 +336,7 @@ var body: some View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                .frame(height: 36)
                 
                 Spacer()
                 
@@ -966,17 +967,16 @@ private struct StartCaptureButton: View {
         }) {
             HStack(spacing: 4) {
                 Image(systemName: "play.fill")
-                    .font(.caption2)
-                Text("Start")
                     .font(.caption)
+                Text("Start")
+                    .font(.callout)
                     .fontWeight(.semibold)
             }
             .frame(minWidth: 80)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 12)
         }
         .buttonStyle(.borderedProminent)
-        .controlSize(.small)
+        .frame(height: 36)
     }
 }
 

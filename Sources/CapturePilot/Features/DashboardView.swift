@@ -3,6 +3,8 @@ import CoreData
 
 struct DashboardView: View {
     @State private var showingNewSession = false
+    @State private var showingDeleteAlert = false
+    @State private var sessionsToDelete: [CaptureSession]?
     
     // Fetch sessions
     // Note: Since we are not using standard Xcode gen, we might need a manual FetchRequest if the class isn't found, 
@@ -42,6 +44,14 @@ struct DashboardView: View {
             .sheet(isPresented: $showingNewSession) {
                 SessionConfigView()
             }
+            .alert("Delete Session?", isPresented: $showingDeleteAlert, presenting: sessionsToDelete) { sessions in
+                Button("Delete", role: .destructive) {
+                    performDelete(sessions)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("This will permanently remove the session and all captured images from the disk. This action cannot be undone.")
+            }
             
             Text("Select a session")
                 .foregroundStyle(.secondary)
@@ -49,8 +59,23 @@ struct DashboardView: View {
     }
     
     private func deleteItems(offsets: IndexSet) {
+        sessionsToDelete = offsets.map { sessions[$0] }
+        showingDeleteAlert = true
+    }
+    
+    private func performDelete(_ sessions: [CaptureSession]) {
         withAnimation {
-            offsets.map { sessions[$0] }.forEach(PersistenceController.shared.container.viewContext.delete)
+            for session in sessions {
+                // Delete folder
+                let path = session.path
+                if !path.isEmpty && FileManager.default.fileExists(atPath: path) {
+                    try? FileManager.default.removeItem(atPath: path)
+                }
+                
+                // Delete from Core Data
+                PersistenceController.shared.container.viewContext.delete(session)
+            }
+            
             try? PersistenceController.shared.container.viewContext.save()
         }
     }

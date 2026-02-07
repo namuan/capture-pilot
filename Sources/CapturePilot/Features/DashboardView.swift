@@ -103,11 +103,13 @@ struct DashboardView: View {
                             }
                             .keyboardShortcut(.escape, modifiers: [])
                         } else {
-                            Button {
-                                isMultiSelectMode = true
-                                selectedSessions.removeAll()
-                            } label: {
-                                Label("Select", systemImage: "checkmark.circle")
+                            if !sessions.isEmpty {
+                                Button {
+                                    isMultiSelectMode = true
+                                    selectedSessions.removeAll()
+                                } label: {
+                                    Label("Select", systemImage: "checkmark.circle")
+                                }
                             }
 
                             Button(action: { showingNewSession = true }) {

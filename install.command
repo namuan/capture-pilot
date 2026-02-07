@@ -34,9 +34,6 @@ else
     mkdir -p "$RESOURCES_DIR"
 fi
 
-mkdir -p "$MACOS_DIR"
-mkdir -p "$RESOURCES_DIR"
-
 # Copy the binary
 cp "$BUILD_DIR/$APP_NAME" "$MACOS_DIR/"
 
@@ -101,4 +98,5 @@ echo "Code signing app bundle..."
 codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "Installation complete! Launch CapturePilot from $APP_BUNDLE"
-open $APP_BUNDLE
+tccutil reset ScreenCapture com.example.CapturePilot
+open "$APP_BUNDLE"

@@ -90,7 +90,6 @@ private struct CapturingView: View {
 
 private struct ConfigurationView: View {
     @ObservedObject var captureEngine: CaptureEngine
-    @State private var showingDirectoryPicker = false
     
     var body: some View {
         ScrollView {
@@ -103,7 +102,7 @@ private struct ConfigurationView: View {
                             .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
                     )
                 
-                OutputSection(captureEngine: captureEngine, showingDirectoryPicker: $showingDirectoryPicker)
+                OutputSection(captureEngine: captureEngine)
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
@@ -120,16 +119,10 @@ private struct ConfigurationView: View {
                     )
                 
                 Spacer(minLength: 20)
-                
-                StartCaptureButton(captureEngine: captureEngine)
             }
             .padding(20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .sheet(isPresented: $showingDirectoryPicker) {
-            DirectoryPickerView(captureEngine: captureEngine)
-                .frame(width: 500, height: 350)
-        }
     }
 }
 
@@ -285,7 +278,7 @@ private struct TargetSourceSection: View {
         )
     }
     
-    var body: some View {
+var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 Image(systemName: "viewfinder")
@@ -309,6 +302,8 @@ private struct TargetSourceSection: View {
                 .labelsHidden()
                 
                 Spacer()
+                
+                StartCaptureButton(captureEngine: captureEngine)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.bottom, 16)
@@ -852,12 +847,9 @@ private struct CustomAreaEditor: View {
 
 private struct OutputSection: View {
     @ObservedObject var captureEngine: CaptureEngine
-    @Binding var showingDirectoryPicker: Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionHeaderView(icon: "folder.fill", title: "Output")
-            
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "folder.fill")
                     .font(.title2)
@@ -882,15 +874,19 @@ private struct OutputSection: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .help(captureEngine.saveDirectory.path)
                         
-                        Button {
-                            showingDirectoryPicker = true
-                        } label: {
-                            Image(systemName: "pencil.circle.fill")
-                                .font(.title3)
-                                .foregroundColor(.accentColor)
+                        Button("Choose Folder...") {
+                            let panel = NSOpenPanel()
+                            panel.canChooseDirectories = true
+                            panel.canChooseFiles = false
+                            panel.allowsMultipleSelection = false
+                            panel.begin { response in
+                                if response == .OK, let url = panel.url {
+                                    captureEngine.saveDirectory = url
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .help("Change save location")
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
                 }
                 
@@ -932,25 +928,19 @@ private struct StartCaptureButton: View {
         Button(action: {
             captureEngine.startCapture()
         }) {
-            HStack(spacing: 10) {
+            HStack(spacing: 4) {
                 Image(systemName: "play.fill")
-                    .font(.callout)
-                Text("Start Capture")
+                    .font(.caption2)
+                Text("Start")
+                    .font(.caption)
                     .fontWeight(.semibold)
             }
-            .frame(minWidth: 160)
-            .padding(.vertical, 12)
+            .frame(minWidth: 80)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
         }
         .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .shadow(
-            color: Color.accentColor.opacity(0.4),
-            radius: 8,
-            x: 0,
-            y: 4
-        )
-        .scaleEffect(1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: false)
+        .controlSize(.small)
     }
 }
 

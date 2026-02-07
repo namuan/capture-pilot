@@ -47,9 +47,40 @@ private struct CapturingView: View {
                     .font(.headline)
                     .foregroundColor(.secondary)
                 
+                // Preview image
+                if let image = captureEngine.lastCapturedImage {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(height: 240)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color(NSColor.controlBackgroundColor))
+                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                        )
+                } else {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text("Waiting for first capture...")
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(height: 240)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(NSColor.controlBackgroundColor))
+                    )
+                }
+                
                 // Capture count
                 Text("\(captureEngine.captureCount)")
-                    .font(.system(size: 72, weight: .bold, design: .rounded))
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                 
                 Text("captures")

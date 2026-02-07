@@ -22,68 +22,97 @@ private struct CapturingView: View {
     @ObservedObject var captureEngine: CaptureEngine
     let dismiss: DismissAction
     
-    var body: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            
-            if let image = captureEngine.lastCapturedImage {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(height: 300)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(NSColor.controlBackgroundColor))
-                            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-                    )
-            } else {
-                VStack(spacing: 12) {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                    Text("Waiting for first capture...")
-                        .font(.callout)
-                        .foregroundColor(.secondary)
-                }
-                .frame(height: 300)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(NSColor.controlBackgroundColor))
-                )
+    private var capturingAreaText: String {
+        if let pid = captureEngine.selectedAppPID {
+            // Get app name
+            let runningApps = NSWorkspace.shared.runningApplications
+            if let app = runningApps.first(where: { $0.processIdentifier == pid }) {
+                return "Capturing: \(app.localizedName ?? "Unknown App")"
             }
-            
-            Text("\(captureEngine.captureCount) captures")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .padding(.top, 8)
-            
-            Spacer()
-            
-            Button(action: {
-                captureEngine.stopCapture()
-                if let folder = captureEngine.currentSessionFolder {
-                    let viewContext = PersistenceController.shared.container.viewContext
-                    let newSession = CaptureSession(context: viewContext)
-                    newSession.id = UUID()
-                    newSession.date = Date()
-                    newSession.path = folder.path
-                    try? viewContext.save()
-                }
-                dismiss()
-            }) {
-                Label("Stop Session", systemImage: "stop.fill")
-                    .frame(minWidth: 140)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.red)
-            .controlSize(.large)
-            .shadow(color: .red.opacity(0.3), radius: 4, x: 0, y: 2)
-            .padding(.bottom, 20)
+            return "Capturing: Application"
+        } else if let rect = captureEngine.captureRect {
+            return "Capturing: Custom Area (\(Int(rect.width))×\(Int(rect.height)))"
+        } else {
+            return "Capturing: Fullscreen"
         }
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            
+            VStack(spacing: 24) {
+                // Capturing area info
+                Text(capturingAreaText)
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                
+                // Preview image
+                if let image = captureEngine.lastCapturedImage {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(height: 240)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color(NSColor.controlBackgroundColor))
+                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                        )
+                } else {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text("Waiting for first capture...")
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(height: 240)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(NSColor.controlBackgroundColor))
+                    )
+                }
+                
+                // Capture count
+                Text("\(captureEngine.captureCount)")
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                
+                Text("captures")
+                    .font(.title3)
+                    .foregroundColor(.secondary)
+                
+                // Stop button
+                Button(action: {
+                    captureEngine.stopCapture()
+                    if let folder = captureEngine.currentSessionFolder {
+                        let viewContext = PersistenceController.shared.container.viewContext
+                        let newSession = CaptureSession(context: viewContext)
+                        newSession.id = UUID()
+                        newSession.date = Date()
+                        newSession.path = folder.path
+                        try? viewContext.save()
+                    }
+                    dismiss()
+                }) {
+                    Label("Stop Session", systemImage: "stop.fill")
+                        .frame(minWidth: 180)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+                .controlSize(.large)
+                .shadow(color: .red.opacity(0.3), radius: 4, x: 0, y: 2)
+            }
+            
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 24)
     }
 }

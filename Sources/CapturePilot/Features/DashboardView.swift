@@ -289,7 +289,9 @@ struct SessionDetailView: View {
                 .padding()
             }
         }
-        .navigationTitle("\(images.count) captures   \(formattedDate)")
+        // Header title is redundant with the in-view metadata; keep the
+        // navigation title empty so the window header doesn't duplicate info.
+        .navigationTitle("")
         .onAppear { loadImages() }
         .onChange(of: session.path) { _ in loadImages() }
         .sheet(isPresented: Binding(get: { selectedImageIndex != nil }, set: { if !$0 { selectedImageIndex = nil } })) {

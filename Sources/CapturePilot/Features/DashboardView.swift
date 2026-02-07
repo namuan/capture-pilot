@@ -195,13 +195,19 @@ struct SessionRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(LinearGradient(colors: [Color.accentColor.opacity(0.9), Color.accentColor.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            // Thumbnail: remove decorative gradient border and show the
+            // image edge-to-edge inside a rounded rect. Keep the hover
+            // shadow but avoid an extra framed border around the image.
+            Group {
                 if let thumb = thumbnail {
-                    Image(nsImage: thumb).resizable().scaledToFill().clipShape(RoundedRectangle(cornerRadius: 6)).padding(2)
+                    Image(nsImage: thumb)
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                 } else {
-                    Image(systemName: "photo").font(.system(size: 20, weight: .semibold)).foregroundColor(.white.opacity(0.95))
+                    // lightweight placeholder background so rows don't jump
+                    RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.08))
+                        .overlay(Image(systemName: "photo").font(.system(size: 14, weight: .semibold)).foregroundColor(.secondary))
                 }
             }
             .frame(width: 72, height: 48)

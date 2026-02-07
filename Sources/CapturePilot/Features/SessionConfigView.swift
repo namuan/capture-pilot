@@ -14,7 +14,7 @@ struct SessionConfigView: View {
                 ConfigurationView(captureEngine: captureEngine)
             }
         }
-        .frame(width: 650, height: 550)
+        .frame(width: 650, height: 550, alignment: .topLeading)
     }
 }
 
@@ -82,9 +82,14 @@ private struct ConfigurationView: View {
                 TargetSourceSection(captureEngine: captureEngine)
                 OutputSection(captureEngine: captureEngine)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            
+            Spacer()
             
             StartCaptureButton(captureEngine: captureEngine)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(16)
     }
 }
 
@@ -112,6 +117,7 @@ private struct CaptureSettingsSection: View {
                     .frame(width: 24)
                 
                 Text("Auto-Key:")
+                    .frame(width: 80, alignment: .trailing)
                 
                 Picker("Auto-Key", selection: $captureEngine.automationKey) {
                     ForEach(AutomationKey.allCases) { key in
@@ -123,6 +129,8 @@ private struct CaptureSettingsSection: View {
             }
         } header: {
             Text("Capture Settings")
+                .font(.headline)
+                .fontWeight(.bold)
         }
     }
 }
@@ -145,6 +153,7 @@ private struct TargetSourceSection: View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 captureTypePicker
+                    .padding(.top, 8)
                 
                 if captureEngine.selectedAppPID != nil {
                     appPicker
@@ -152,8 +161,6 @@ private struct TargetSourceSection: View {
                     CustomAreaEditor(captureEngine: captureEngine)
                 }
             }
-        } header: {
-            Text("Target Source")
         }
     }
     
@@ -258,9 +265,6 @@ private struct AppGridPicker: View {
 
     private var headerRow: some View {
         HStack(alignment: .center, spacing: 10) {
-            Text("Application:")
-                .frame(width: 90, alignment: .trailing)
-
             if let selected = selectedAppName {
                 Text(selected)
                     .font(.callout)
@@ -682,7 +686,6 @@ private struct StartCaptureButton: View {
             .controlSize(.large)
             Spacer()
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.top, 16)
     }
 }

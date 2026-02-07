@@ -251,7 +251,6 @@ struct SessionDetailView: View {
     @State private var images: [URL] = []
     @State private var selectedImageIndex: Int? = nil
     @State private var isLoading = true
-    @State private var detailThumbVisible = false
 
     private let columns = [ GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16) ]
 
@@ -264,19 +263,6 @@ struct SessionDetailView: View {
     var body: some View {
         ScrollView {
             HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8).fill(LinearGradient(colors: [Color.accentColor.opacity(0.9), Color.accentColor.opacity(0.6)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    Image(systemName: "photo").font(.system(size: 20, weight: .semibold)).foregroundColor(.white.opacity(0.9))
-                }
-                .frame(width: 120, height: 80)
-                // animate the detail thumbnail independently (fade + slight scale)
-                .opacity(detailThumbVisible ? 1 : 0)
-                .scaleEffect(detailThumbVisible ? 1 : 0.98)
-                .animation(.easeOut(duration: 0.22), value: detailThumbVisible)
-                // removed matchedGeometryEffect here to avoid the list thumbnail
-                // being hidden during the transition. Keeping a static thumbnail
-                // in the detail view preserves visibility in the sessions list.
-
                 VStack(alignment: .leading, spacing: 4) {
                     Text(session.date, style: .date).font(.title2).fontWeight(.semibold)
                     Text(session.path).font(.caption).foregroundStyle(.secondary).lineLimit(2)
@@ -304,23 +290,8 @@ struct SessionDetailView: View {
             }
         }
         .navigationTitle("\(images.count) captures   \(formattedDate)")
-        .onAppear {
-            // ensure thumbnail starts hidden, load images, then animate in
-            detailThumbVisible = false
-            loadImages()
-            DispatchQueue.main.async {
-                withAnimation(.easeOut(duration: 0.22)) { detailThumbVisible = true }
-            }
-        }
-        .onChange(of: session.path) { _ in
-            // when session content changes, re-run the thumbnail entrance
-            detailThumbVisible = false
-            loadImages()
-            DispatchQueue.main.async {
-                withAnimation(.easeOut(duration: 0.22)) { detailThumbVisible = true }
-            }
-        }
-        .onDisappear { detailThumbVisible = false }
+        .onAppear { loadImages() }
+        .onChange(of: session.path) { _ in loadImages() }
         .sheet(isPresented: Binding(get: { selectedImageIndex != nil }, set: { if !$0 { selectedImageIndex = nil } })) {
             if selectedImageIndex != nil { ImagePreviewView(images: images, currentIndex: selectedImageBinding) }
         }

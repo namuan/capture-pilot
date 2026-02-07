@@ -30,6 +30,14 @@ struct DashboardView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            sessionsToDelete = [session]
+                            showingDeleteAlert = true
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                 }
                 .onDelete(perform: deleteItems)
             }

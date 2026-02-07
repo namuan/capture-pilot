@@ -14,7 +14,15 @@ class CaptureEngine: ObservableObject {
     @Published var currentSessionFolder: URL?
     
     // Configuration
-    @Published var interval: TimeInterval = 1.0
+    @Published var interval: TimeInterval = 1.0 {
+        didSet {
+            // Round to nearest whole number
+            let rounded = round(interval)
+            if rounded != interval {
+                interval = max(1.0, rounded)
+            }
+        }
+    }
     @Published var captureRect: CGRect? = nil
     @Published var selectedAppPID: pid_t? = nil
     @Published var automationKey: AutomationKey = .none

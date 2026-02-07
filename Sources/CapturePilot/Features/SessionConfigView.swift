@@ -286,7 +286,7 @@ private struct TargetSourceSection: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 Image(systemName: "viewfinder")
                     .font(.callout)
@@ -308,13 +308,14 @@ private struct TargetSourceSection: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
             }
+            .padding(.bottom, 16)
             
             if captureEngine.selectedAppPID != nil {
                 appPicker
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(.opacity)
             } else if captureEngine.captureRect != nil {
                 CustomAreaEditor(captureEngine: captureEngine)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(.opacity)
             }
         }
     }

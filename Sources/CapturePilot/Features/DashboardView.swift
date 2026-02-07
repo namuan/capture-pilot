@@ -49,14 +49,7 @@ struct DashboardView: View {
                                 }
                             }
                             .background(selectedSessions.contains(session.id) && isMultiSelectMode ? Color.accentColor.opacity(0.06) : Color.clear)
-                            .contextMenu {
-                                if !isMultiSelectMode {
-                                    Button(role: .destructive) {
-                                        sessionsToDelete = [session]
-                                        showingDeleteAlert = true
-                                    } label: { Label("Delete", systemImage: "trash") }
-                                }
-                            }
+
                             .padding(.horizontal, 8)
                     }
                 }

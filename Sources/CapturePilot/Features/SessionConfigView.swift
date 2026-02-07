@@ -856,8 +856,6 @@ private struct OutputSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionHeaderView(icon: "folder.fill", title: "Output")
-            
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "folder.fill")
                     .font(.title2)

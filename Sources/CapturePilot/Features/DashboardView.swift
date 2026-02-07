@@ -186,6 +186,8 @@ struct SessionRow: View {
     let session: CaptureSession
     let isSelected: Bool
     let isMultiSelectMode: Bool
+    // This row does not act as the matched-geometry source so it stays visible
+    // when the detail view animates its thumbnail into place.
     let namespace: Namespace.ID
 
     @State private var thumbnail: NSImage? = nil
@@ -203,7 +205,6 @@ struct SessionRow: View {
                     Image(systemName: "photo").font(.system(size: 20, weight: .semibold)).foregroundColor(.white.opacity(0.95))
                 }
             }
-            .matchedGeometryEffect(id: "session-thumb-\(session.id.uuidString)", in: namespace)
             .frame(width: 72, height: 48)
             .clipped()
             .shadow(color: isHover ? Color.black.opacity(0.25) : Color.black.opacity(0.12), radius: isHover ? 8 : 4, x: 0, y: isHover ? 6 : 2)
@@ -265,7 +266,9 @@ struct SessionDetailView: View {
                     Image(systemName: "photo").font(.system(size: 20, weight: .semibold)).foregroundColor(.white.opacity(0.9))
                 }
                 .frame(width: 120, height: 80)
-                .matchedGeometryEffect(id: "session-thumb-\(session.id.uuidString)", in: namespace)
+                // removed matchedGeometryEffect here to avoid the list thumbnail
+                // being hidden during the transition. Keeping a static thumbnail
+                // in the detail view preserves visibility in the sessions list.
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(session.date, style: .date).font(.title2).fontWeight(.semibold)

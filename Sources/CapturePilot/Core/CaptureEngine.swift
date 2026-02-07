@@ -4,6 +4,8 @@ import AppKit
 import UniformTypeIdentifiers
 
 class CaptureEngine: ObservableObject {
+    static let shared = CaptureEngine()
+    
     @Published var isCapturing = false
     @Published var lastCapturedImage: NSImage?
     @Published var captureCount = 0
@@ -26,12 +28,27 @@ class CaptureEngine: ObservableObject {
     @Published var captureRect: CGRect? = nil
     @Published var selectedAppPID: pid_t? = nil
     @Published var automationKey: AutomationKey = .none
+    @Published var hideWindowOnCapture: Bool = true
     var saveDirectory: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures/CapturePilot")
     
     private let automationEngine = AutomationEngine()
+    private let windowManager = WindowManager.shared
+    private let menuBarManager = MenuBarManager.shared
     
-    init() {
+    private init() {
         createSaveDirectory()
+        setupMenuBar()
+    }
+    
+    private func setupMenuBar() {
+        menuBarManager.configure(
+            stopCapture: { [weak self] in
+                self?.stopCapture()
+            },
+            showWindow: {
+                WindowManager.shared.showWindow()
+            }
+        )
     }
     
     private func createSaveDirectory() {
@@ -42,6 +59,15 @@ class CaptureEngine: ObservableObject {
     
     func startCapture() {
         guard !isCapturing else { return }
+        
+        // Hide window if enabled
+        if hideWindowOnCapture {
+            windowManager.hideWindow()
+        }
+        
+        // Show menu bar
+        menuBarManager.showMenuBar()
+        menuBarManager.updateCapturingState(true)
         
         // Create session folder
         let dateFormatter = DateFormatter()
@@ -71,6 +97,11 @@ class CaptureEngine: ObservableObject {
         isCapturing = false
         timer?.invalidate()
         timer = nil
+        
+        // Hide menu bar and show window
+        menuBarManager.updateCapturingState(false)
+        menuBarManager.hideMenuBar()
+        windowManager.showWindow()
     }
     
     private func performAutomation() {
@@ -126,6 +157,7 @@ class CaptureEngine: ObservableObject {
         DispatchQueue.main.async {
             self.lastCapturedImage = nsImage
             self.captureCount += 1
+            self.menuBarManager.updateCaptureCount(self.captureCount)
         }
         
         // Save to disk

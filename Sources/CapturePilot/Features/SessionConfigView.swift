@@ -4,7 +4,7 @@ import CoreGraphics
 
 struct SessionConfigView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var captureEngine = CaptureEngine()
+    @ObservedObject private var captureEngine = CaptureEngine.shared
     
     var body: some View {
         VStack(spacing: 0) {
@@ -140,6 +140,14 @@ private struct ConfigurationView: View {
                     )
                 
                 TargetSourceSection(captureEngine: captureEngine)
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(NSColor.controlBackgroundColor))
+                            .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
+                    )
+                
+                ShortcutsSection(captureEngine: captureEngine)
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
@@ -970,6 +978,53 @@ private struct StartCaptureButton: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.small)
+    }
+}
+
+private struct ShortcutsSection: View {
+    @ObservedObject var captureEngine: CaptureEngine
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeaderView(icon: "menubar.rectangle", title: "Menu Bar Control")
+            
+            VStack(spacing: 12) {
+                // Hide window toggle
+                Toggle(isOn: $captureEngine.hideWindowOnCapture) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "eye.slash.fill")
+                            .foregroundColor(.accentColor)
+                            .frame(width: 24)
+                        Text("Hide window while capturing")
+                            .font(.callout)
+                    }
+                }
+                .toggleStyle(.checkbox)
+                
+                Divider()
+                
+                // Menu bar info
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "camera.fill")
+                            .foregroundColor(.accentColor)
+                            .frame(width: 24)
+                        Text("When capture starts, the window will hide and a menu bar icon will appear")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "stop.fill")
+                            .foregroundColor(.accentColor)
+                            .frame(width: 24)
+                        Text("Click the menu bar icon to stop capture and show the window")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
     }
 }
 

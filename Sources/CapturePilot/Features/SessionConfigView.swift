@@ -92,37 +92,36 @@ private struct CaptureSettingsSection: View {
     
     var body: some View {
         Section {
-            HStack(alignment: .center, spacing: 16) {
+            HStack(alignment: .center, spacing: 8) {
                 Text("Interval:")
-                    .frame(width: 90, alignment: .trailing)
-                HStack(spacing: 12) {
-                    Slider(value: $captureEngine.interval, in: 0.5...60, step: 0.5)
-                        .frame(minWidth: 200)
-                    Text(String(format: "%.1fs", captureEngine.interval))
-                        .monospacedDigit()
-                        .foregroundColor(.secondary)
-                        .frame(width: 50, alignment: .trailing)
-                }
-            }
-            .padding(.vertical, 4)
-            
-            HStack(alignment: .center, spacing: 16) {
+                
+                TextField("", value: $captureEngine.interval, format: .number)
+                    .frame(width: 50)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.trailing)
+                
+                Stepper("", value: $captureEngine.interval, in: 0.5...60, step: 0.5)
+                    .labelsHidden()
+                
+                Text("s")
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                    .frame(width: 24)
+                
                 Text("Auto-Key:")
-                    .frame(width: 90, alignment: .trailing)
+                
                 Picker("Auto-Key", selection: $captureEngine.automationKey) {
                     ForEach(AutomationKey.allCases) { key in
                         Text(key.rawValue).tag(key)
                     }
                 }
                 .labelsHidden()
-                .frame(width: 200, alignment: .leading)
-                Spacer()
+                .frame(width: 140)
             }
-            .padding(.vertical, 4)
         } header: {
             Text("Capture Settings")
         }
-        .padding(.bottom, 8)
     }
 }
 
@@ -154,7 +153,6 @@ private struct TargetSourceSection: View {
         } header: {
             Text("Target Source")
         }
-        .padding(.bottom, 8)
     }
     
     private var captureTypePicker: some View {
@@ -204,7 +202,6 @@ private struct TargetSourceSection: View {
             Spacer()
         }
         .padding(.top, 12)
-        .padding(.vertical, 4)
     }
 }
 
@@ -311,9 +308,6 @@ private struct OutputSection: View {
                     .help(captureEngine.saveDirectory.path)
                 Spacer()
             }
-            .padding(.vertical, 4)
-        } header: {
-            Text("Output")
         }
     }
 }

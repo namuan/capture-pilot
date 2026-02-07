@@ -313,16 +313,72 @@ struct ImagePreviewView: View {
     @State private var lastScale: CGFloat = 1.0
     
     var body: some View {
-        NavigationView {
+        VStack(spacing: 0) {
+            // macOS-style title bar
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                
+                Spacer()
+                
+                Text(imageURL.lastPathComponent)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    
+                Spacer()
+                
+                HStack(spacing: 12) {
+                    Button {
+                        let pasteboard = NSPasteboard.general
+                        pasteboard.clearContents()
+                        if let image = image {
+                            pasteboard.writeObjects([image])
+                        }
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 16))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Copy Image")
+                    .disabled(image == nil)
+                    
+                    Button {
+                        NSWorkspace.shared.open(imageURL)
+                    } label: {
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.system(size: 16))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Open in Finder")
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(nsColor: .windowBackgroundColor))
+            .overlay(
+                Rectangle()
+                    .frame(height: 0.5)
+                    .foregroundColor(Color(nsColor: .separatorColor)),
+                alignment: .bottom
+            )
+            
+            // Image content fills all remaining space
             ZStack {
-                Color.black.opacity(0.9)
-                    .ignoresSafeArea()
+                Color(nsColor: .underPageBackgroundColor)
                 
                 if let image = image {
                     Image(nsImage: image)
                         .resizable()
                         .scaledToFit()
                         .scaleEffect(scale)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .gesture(
                             MagnificationGesture()
                                 .onChanged { value in
@@ -339,29 +395,12 @@ struct ImagePreviewView: View {
                             }
                         }
                 } else {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .foregroundStyle(.white)
-                }
-            }
-            .navigationTitle(imageURL.lastPathComponent)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        NSWorkspace.shared.open(imageURL)
-                    } label: {
-                        Image(systemName: "arrow.up.right.square")
-                    }
-                    .help("Open in Finder")
+                    ProgressView("Loading image...")
+                        .scaleEffect(1.2)
                 }
             }
         }
-        .frame(minWidth: 800, minHeight: 600)
+        .frame(minWidth: 1200, minHeight: 800)
         .onAppear {
             loadImage()
         }

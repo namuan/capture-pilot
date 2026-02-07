@@ -64,8 +64,6 @@ private struct CapturingView: View {
             Spacer()
             
             Button(action: {
-                let generator = UIImpactFeedbackGenerator(style: .medium)
-                generator.impactOccurred()
                 captureEngine.stopCapture()
                 if let folder = captureEngine.currentSessionFolder {
                     let viewContext = PersistenceController.shared.container.viewContext
@@ -264,8 +262,6 @@ private struct TargetSourceSection: View {
         Binding(
             get: { captureType },
             set: { newValue in
-                let generator = UIImpactFeedbackGenerator(style: .light)
-                generator.impactOccurred()
                 switch newValue {
                 case "Fullscreen":
                     captureEngine.captureRect = nil
@@ -378,8 +374,6 @@ private struct AppGridPicker: View {
                                     }
                                 }
                                 .onLongPressGesture {
-                                    let generator = UINotificationFeedbackGenerator()
-                                    generator.notificationOccurred(.success)
                                 }
                             }
                         }
@@ -433,8 +427,6 @@ private struct AppGridPicker: View {
             Spacer()
             
             Button {
-                let generator = UIImpactFeedbackGenerator(style: .light)
-                generator.impactOccurred()
                 reloadApps()
             } label: {
                 Image(systemName: "arrow.clockwise")
@@ -653,8 +645,6 @@ private struct AppGridTile: View {
     
     var body: some View {
         Button(action: {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
             action()
         }) {
             VStack(alignment: .leading, spacing: 8) {
@@ -882,8 +872,6 @@ private struct OutputSection: View {
                             .help(captureEngine.saveDirectory.path)
                         
                         Button {
-                            let generator = UIImpactFeedbackGenerator(style: .light)
-                            generator.impactOccurred()
                             showingDirectoryPicker = true
                         } label: {
                             Image(systemName: "pencil.circle.fill")
@@ -931,8 +919,6 @@ private struct StartCaptureButton: View {
     
     var body: some View {
         Button(action: {
-            let generator = UIImpactFeedbackGenerator(style: .heavy)
-            generator.impactOccurred()
             captureEngine.startCapture()
         }) {
             HStack(spacing: 10) {
@@ -961,13 +947,10 @@ extension AutomationKey {
     var symbolName: String {
         switch self {
         case .space: return "space"
-        case .enter: return "return"
-        case .escape: return "escape"
-        case .tab: return "arrow.right.to.line"
-        case .commandS: return "command"
-        case .shiftS: return "shift"
-        case .controlS: return "control"
-        case .optionS: return "option"
+        case .rightArrow: return "arrow.right"
+        case .leftArrow: return "arrow.left"
+        case .pageDown: return "arrow.down.to.line"
+        case .none: return "xmark"
         }
     }
 }

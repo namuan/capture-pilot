@@ -1018,16 +1018,24 @@ private struct ShortcutsSection: View {
             
             VStack(spacing: 12) {
                 // Hide window toggle
-                Toggle(isOn: $captureEngine.hideWindowOnCapture) {
+                HStack(alignment: .top, spacing: 0) {
+                    Toggle(isOn: $captureEngine.hideWindowOnCapture) {
+                        EmptyView()
+                    }
+                    .toggleStyle(.checkbox)
+                    .padding(.top, 2) // Align checkbox with text baseline
+                    .padding(.leading, 2) // Adjust checkbox horizontal position
+                    
                     HStack(spacing: 8) {
                         Image(systemName: "eye.slash.fill")
                             .foregroundColor(.accentColor)
                             .frame(width: 24)
                         Text("Hide window while capturing")
                             .font(.callout)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .padding(.leading, 2)
                 }
-                .toggleStyle(.checkbox)
                 
                 Divider()
                 

@@ -14,7 +14,7 @@ struct SessionConfigView: View {
                 ConfigurationView(captureEngine: captureEngine)
             }
         }
-        .frame(width: 650, height: 550)
+        .frame(width: 650, height: 550, alignment: .topLeading)
     }
 }
 
@@ -82,9 +82,12 @@ private struct ConfigurationView: View {
                 TargetSourceSection(captureEngine: captureEngine)
                 OutputSection(captureEngine: captureEngine)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             
             StartCaptureButton(captureEngine: captureEngine)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(16)
     }
 }
 
@@ -682,7 +685,6 @@ private struct StartCaptureButton: View {
             .controlSize(.large)
             Spacer()
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.top, 16)
     }
 }

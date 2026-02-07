@@ -20,7 +20,7 @@ struct DashboardView: View {
         animation: .default)
     private var sessions: FetchedResults<CaptureSession>
 
-    @Namespace private var namespace
+    // removed matched-geometry namespace — we animate thumbnails separately
 
     var body: some View {
         NavigationView {
@@ -31,7 +31,7 @@ struct DashboardView: View {
                         SessionRow(session: session,
                                    isSelected: selectedSessions.contains(session.id),
                                    isMultiSelectMode: isMultiSelectMode,
-                                   namespace: namespace)
+                                   isActive: selectedSession?.objectID == session.objectID)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 if isMultiSelectMode {
@@ -107,10 +107,10 @@ struct DashboardView: View {
     // inline fixes parsing and avoids duplicate definitions.
 
     @ViewBuilder private var detailView: some View {
-        if let session = selectedSession, sessions.contains(where: { $0.objectID == session.objectID }) {
-            SessionDetailView(session: session, namespace: namespace)
+            if let session = selectedSession, sessions.contains(where: { $0.objectID == session.objectID }) {
+            SessionDetailView(session: session)
                 .id(session.id)
-        } else {
+            } else {
             VStack(spacing: 12) {
                 Image(systemName: "photo.on.rectangle.angled")
                     .font(.system(size: 64))
@@ -186,9 +186,8 @@ struct SessionRow: View {
     let session: CaptureSession
     let isSelected: Bool
     let isMultiSelectMode: Bool
-    // This row does not act as the matched-geometry source so it stays visible
-    // when the detail view animates its thumbnail into place.
-    let namespace: Namespace.ID
+    let isActive: Bool
+    // This row is animated when active so the list thumbnail remains visible
 
     @State private var thumbnail: NSImage? = nil
     @State private var imageCount: Int? = nil
@@ -208,6 +207,10 @@ struct SessionRow: View {
             .frame(width: 72, height: 48)
             .clipped()
             .shadow(color: isHover ? Color.black.opacity(0.25) : Color.black.opacity(0.12), radius: isHover ? 8 : 4, x: 0, y: isHover ? 6 : 2)
+            // subtle list-side animation when the row becomes active (selection)
+            .opacity(isActive ? 0.78 : 1.0)
+            .scaleEffect(isActive ? 0.985 : 1.0)
+            .animation(.easeInOut(duration: 0.18), value: isActive)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(session.date, style: .date).font(.headline)
@@ -245,10 +248,10 @@ struct SessionRow: View {
 
 struct SessionDetailView: View {
     let session: CaptureSession
-    let namespace: Namespace.ID
     @State private var images: [URL] = []
     @State private var selectedImageIndex: Int? = nil
     @State private var isLoading = true
+    @State private var detailThumbVisible = false
 
     private let columns = [ GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16) ]
 
@@ -266,6 +269,10 @@ struct SessionDetailView: View {
                     Image(systemName: "photo").font(.system(size: 20, weight: .semibold)).foregroundColor(.white.opacity(0.9))
                 }
                 .frame(width: 120, height: 80)
+                // animate the detail thumbnail independently (fade + slight scale)
+                .opacity(detailThumbVisible ? 1 : 0)
+                .scaleEffect(detailThumbVisible ? 1 : 0.98)
+                .animation(.easeOut(duration: 0.22), value: detailThumbVisible)
                 // removed matchedGeometryEffect here to avoid the list thumbnail
                 // being hidden during the transition. Keeping a static thumbnail
                 // in the detail view preserves visibility in the sessions list.
@@ -297,8 +304,23 @@ struct SessionDetailView: View {
             }
         }
         .navigationTitle("\(images.count) captures   \(formattedDate)")
-        .onAppear { loadImages() }
-        .onChange(of: session.path) { _ in loadImages() }
+        .onAppear {
+            // ensure thumbnail starts hidden, load images, then animate in
+            detailThumbVisible = false
+            loadImages()
+            DispatchQueue.main.async {
+                withAnimation(.easeOut(duration: 0.22)) { detailThumbVisible = true }
+            }
+        }
+        .onChange(of: session.path) { _ in
+            // when session content changes, re-run the thumbnail entrance
+            detailThumbVisible = false
+            loadImages()
+            DispatchQueue.main.async {
+                withAnimation(.easeOut(duration: 0.22)) { detailThumbVisible = true }
+            }
+        }
+        .onDisappear { detailThumbVisible = false }
         .sheet(isPresented: Binding(get: { selectedImageIndex != nil }, set: { if !$0 { selectedImageIndex = nil } })) {
             if selectedImageIndex != nil { ImagePreviewView(images: images, currentIndex: selectedImageBinding) }
         }

@@ -287,9 +287,16 @@ private struct TargetSourceSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            SectionHeaderView(icon: "viewfinder", title: "Target Source")
-            
-            VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: "viewfinder")
+                    .font(.callout)
+                    .foregroundColor(.accentColor)
+                    .frame(width: 24, height: 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.accentColor.opacity(0.15))
+                    )
+                
                 Picker("Type:", selection: captureTypeBinding) {
                     Label("Fullscreen", systemImage: "rectangle.fill")
                         .tag("Fullscreen")
@@ -300,14 +307,14 @@ private struct TargetSourceSection: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                
-                if captureEngine.selectedAppPID != nil {
-                    appPicker
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                } else if captureEngine.captureRect != nil {
-                    CustomAreaEditor(captureEngine: captureEngine)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
+            }
+            
+            if captureEngine.selectedAppPID != nil {
+                appPicker
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            } else if captureEngine.captureRect != nil {
+                CustomAreaEditor(captureEngine: captureEngine)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
     }

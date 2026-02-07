@@ -1,0 +1,27 @@
+# Swift / Apple
+.build/
+Packages/
+Package.resolved
+.swiftpm/
+*.xcodeproj
+*.xcworkspace
+build/
+DerivedData/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+
+# User Specific
+.artifacts/
+.gemini/
+.agent/
+*.swp
+*.lock
+
+# Build artifacts from install.command
+*.xcarchive
+exportOptions.plist

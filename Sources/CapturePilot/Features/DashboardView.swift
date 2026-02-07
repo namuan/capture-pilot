@@ -228,6 +228,13 @@ struct SessionDetailView: View {
         )
     }
 
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: session.date)
+    }
+
     var body: some View {
         ScrollView {
             if isLoading {
@@ -257,17 +264,7 @@ struct SessionDetailView: View {
                 .padding()
             }
         }
-        .navigationTitle(Text(session.date, style: .date))
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                HStack(spacing: 8) {
-                    Image(systemName: "photo")
-                    Text("\(images.count) captures")
-                        .font(.caption)
-                }
-                .foregroundColor(.secondary)
-            }
-        }
+        .navigationTitle("\(images.count) captures   \(formattedDate)")
         .onAppear {
             loadImages()
         }

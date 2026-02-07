@@ -16,12 +16,14 @@ class CaptureEngine: ObservableObject {
     @Published var currentSessionFolder: URL?
     
     // Configuration
-    @Published var interval: TimeInterval = 1.0 {
+    // Default interval is 10 seconds. Enforce whole-second values and clamp to 1..500.
+    @Published var interval: TimeInterval = 10.0 {
         didSet {
-            // Round to nearest whole number
+            // Round to nearest whole number and clamp to allowed range
             let rounded = round(interval)
-            if rounded != interval {
-                interval = max(1.0, rounded)
+            let clamped = min(max(1.0, rounded), 500.0)
+            if clamped != interval {
+                interval = clamped
             }
         }
     }

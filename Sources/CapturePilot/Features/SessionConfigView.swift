@@ -234,7 +234,7 @@ private struct CaptureSettingsSection: View {
                         .multilineTextAlignment(.trailing)
                         .padding(.horizontal, 4)
                     
-                    Stepper("", value: $captureEngine.interval, in: 1...60, step: 1.0)
+                    Stepper("", value: $captureEngine.interval, in: 1...500, step: 1.0)
                         .labelsHidden()
                     
                     Text("seconds")

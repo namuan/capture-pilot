@@ -32,6 +32,7 @@ struct DashboardView: View {
                                 Text(session.path)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                                    .lineLimit(1)
                             }
                             Spacer()
                             if selectedSession == session {
@@ -53,7 +54,9 @@ struct DashboardView: View {
                 }
                 .onDelete(perform: deleteItems)
             }
-            .navigationTitle("Dashboard")
+            .listStyle(.sidebar)
+            .frame(minWidth: 250)
+            .navigationTitle("Sessions")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { showingNewSession = true }) {
@@ -61,7 +64,12 @@ struct DashboardView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingNewSession) {
+            .sheet(isPresented: $showingNewSession, onDismiss: {
+                // Refresh selection when sheet closes (new session might have been created)
+                if let lastSession = sessions.first {
+                    selectedSession = lastSession
+                }
+            }) {
                 SessionConfigView()
             }
             .alert("Delete Session?", isPresented: $showingDeleteAlert, presenting: sessionsToDelete) { sessions in
@@ -73,13 +81,37 @@ struct DashboardView: View {
                 Text("This will permanently remove the session and all captured images from the disk. This action cannot be undone.")
             }
             
-            // Show default message when no session is selected or no sessions exist
-            if let session = selectedSession, sessions.contains(where: { $0.id == session.id }) {
-                SessionDetailView(session: session)
-            } else {
-                Text(sessions.isEmpty ? "No sessions available" : "Select a session")
-                    .foregroundStyle(.secondary)
+            // Detail view area
+            detailView
+        }
+        .navigationViewStyle(DoubleColumnNavigationViewStyle())
+    }
+    
+    @ViewBuilder
+    private var detailView: some View {
+        if let session = selectedSession, sessions.contains(where: { $0.id == session.id }) {
+            SessionDetailView(session: session)
+                .id(session.id)
+        } else {
+            VStack(spacing: 12) {
+                Image(systemName: "photo.on.rectangle.angled")
+                    .font(.system(size: 64))
+                    .foregroundColor(.secondary)
+                if sessions.isEmpty {
+                    Text("No sessions available")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                    Text("Click + to start a new capture session")
+                        .font(.caption)
+                        .foregroundColor(.secondary.opacity(0.7))
+                } else {
+                    Text("Select a session to view screenshots")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(NSColor.windowBackgroundColor))
         }
     }
     
@@ -112,9 +144,258 @@ struct DashboardView: View {
 
 struct SessionDetailView: View {
     let session: CaptureSession
+    @State private var images: [URL] = []
+    @State private var selectedImage: URL? = nil
+    @State private var isLoading = true
+    
+    private let columns = [
+        GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16)
+    ]
     
     var body: some View {
-        Text("Session Details for \(session.date)")
-            .navigationTitle("Session")
+        ScrollView {
+            if isLoading {
+                ProgressView("Loading screenshots...")
+                    .scaleEffect(1.2)
+                    .padding(.top, 100)
+            } else if images.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "photo.on.rectangle.angled")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    Text("No screenshots captured yet")
+                        .foregroundColor(.secondary)
+                }
+                .padding(.top, 100)
+            } else {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(images, id: \.self) { imageURL in
+                        ScreenshotThumbnail(imageURL: imageURL)
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    selectedImage = imageURL
+                                }
+                            }
+                    }
+                }
+                .padding()
+            }
+        }
+        .navigationTitle(Text(session.date, style: .date))
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                HStack(spacing: 8) {
+                    Image(systemName: "photo")
+                    Text("\(images.count) captures")
+                        .font(.caption)
+                }
+                .foregroundColor(.secondary)
+            }
+        }
+        .onAppear {
+            loadImages()
+        }
+        .onChange(of: session.path) { _ in
+            loadImages()
+        }
+        .sheet(item: $selectedImage) { imageURL in
+            ImagePreviewView(imageURL: imageURL)
+        }
     }
+    
+    private func loadImages() {
+        isLoading = true
+        images = []
+        
+        let path = session.path
+        print("Loading images from path: \(path)")
+        
+        guard !path.isEmpty else {
+            print("Path is empty, skipping load")
+            isLoading = false
+            return
+        }
+        
+        let fileManager = FileManager.default
+        let url = URL(fileURLWithPath: path)
+        
+        guard fileManager.fileExists(atPath: path) else {
+            print("Directory does not exist at path: \(path)")
+            isLoading = false
+            return
+        }
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let contents = try fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
+                let imageFiles = contents
+                    .filter { $0.pathExtension.lowercased() == "png" }
+                    .sorted { $0.lastPathComponent < $1.lastPathComponent }
+                
+                print("Found \(imageFiles.count) images in \(path)")
+                
+                DispatchQueue.main.async {
+                    self.images = imageFiles
+                    self.isLoading = false
+                }
+            } catch {
+                print("Error loading images: \(error)")
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+}
+
+struct ScreenshotThumbnail: View {
+    let imageURL: URL
+    @State private var image: NSImage? = nil
+    @State private var isHovered = false
+    
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.windowBackgroundColor))
+                .shadow(
+                    color: isHovered ? .blue.opacity(0.3) : .black.opacity(0.15),
+                    radius: isHovered ? 12 : 6,
+                    x: 0,
+                    y: isHovered ? 4 : 2
+                )
+            
+            if let image = image {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .padding(4)
+            } else {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.gray.opacity(0.2))
+                    .overlay(
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    )
+                    .padding(4)
+            }
+        }
+        .aspectRatio(16/10, contentMode: .fit)
+        .onAppear {
+            loadThumbnail()
+        }
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovered = hovering
+            }
+        }
+        .scaleEffect(isHovered ? 1.02 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isHovered)
+    }
+    
+    private func loadThumbnail() {
+        DispatchQueue.global(qos: .userInitiated).async {
+            if let image = NSImage(contentsOf: imageURL) {
+                let resized = image.resized(to: NSSize(width: 400, height: 250))
+                DispatchQueue.main.async {
+                    self.image = resized
+                }
+            }
+        }
+    }
+}
+
+struct ImagePreviewView: View {
+    let imageURL: URL
+    @Environment(\.dismiss) private var dismiss
+    @State private var image: NSImage? = nil
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.opacity(0.9)
+                    .ignoresSafeArea()
+                
+                if let image = image {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .scaleEffect(scale)
+                        .gesture(
+                            MagnificationGesture()
+                                .onChanged { value in
+                                    scale = lastScale * value
+                                }
+                                .onEnded { _ in
+                                    lastScale = scale
+                                }
+                        )
+                        .onTapGesture(count: 2) {
+                            withAnimation(.spring()) {
+                                scale = 1.0
+                                lastScale = 1.0
+                            }
+                        }
+                } else {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .foregroundStyle(.white)
+                }
+            }
+            .navigationTitle(imageURL.lastPathComponent)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        NSWorkspace.shared.open(imageURL)
+                    } label: {
+                        Image(systemName: "arrow.up.right.square")
+                    }
+                    .help("Open in Finder")
+                }
+            }
+        }
+        .frame(minWidth: 800, minHeight: 600)
+        .onAppear {
+            loadImage()
+        }
+    }
+    
+    private func loadImage() {
+        DispatchQueue.global(qos: .userInitiated).async {
+            if let image = NSImage(contentsOf: imageURL) {
+                DispatchQueue.main.async {
+                    self.image = image
+                }
+            }
+        }
+    }
+}
+
+extension NSImage {
+    func resized(to newSize: NSSize) -> NSImage {
+        let newImage = NSImage(size: newSize)
+        newImage.lockFocus()
+        
+        let context = NSGraphicsContext.current
+        context?.imageInterpolation = .high
+        
+        draw(in: NSRect(origin: .zero, size: newSize), 
+             from: NSRect(origin: .zero, size: size), 
+             operation: .copy, 
+             fraction: 1.0)
+        
+        newImage.unlockFocus()
+        return newImage
+    }
+}
+
+extension URL: @retroactive Identifiable {
+    public var id: String { absoluteString }
 }

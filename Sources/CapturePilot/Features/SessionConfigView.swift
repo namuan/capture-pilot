@@ -103,7 +103,7 @@ private struct ConfigurationView: View {
                             .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
                     )
                 
-                TargetSourceSection(captureEngine: captureEngine)
+                OutputSection(captureEngine: captureEngine, showingDirectoryPicker: $showingDirectoryPicker)
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
@@ -111,7 +111,7 @@ private struct ConfigurationView: View {
                             .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
                     )
                 
-                OutputSection(captureEngine: captureEngine, showingDirectoryPicker: $showingDirectoryPicker)
+                TargetSourceSection(captureEngine: captureEngine)
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
@@ -286,10 +286,17 @@ private struct TargetSourceSection: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeaderView(icon: "viewfinder", title: "Target Source")
-            
-            VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                Image(systemName: "viewfinder")
+                    .font(.callout)
+                    .foregroundColor(.accentColor)
+                    .frame(width: 24, height: 24)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.accentColor.opacity(0.15))
+                    )
+                
                 Picker("Type:", selection: captureTypeBinding) {
                     Label("Fullscreen", systemImage: "rectangle.fill")
                         .tag("Fullscreen")
@@ -301,13 +308,17 @@ private struct TargetSourceSection: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 
-                if captureEngine.selectedAppPID != nil {
-                    appPicker
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                } else if captureEngine.captureRect != nil {
-                    CustomAreaEditor(captureEngine: captureEngine)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.bottom, 16)
+            
+            if captureEngine.selectedAppPID != nil {
+                appPicker
+                    .transition(.opacity)
+            } else if captureEngine.captureRect != nil {
+                CustomAreaEditor(captureEngine: captureEngine)
+                    .transition(.opacity)
             }
         }
     }

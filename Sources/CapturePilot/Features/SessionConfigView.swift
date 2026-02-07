@@ -90,7 +90,6 @@ private struct CapturingView: View {
 
 private struct ConfigurationView: View {
     @ObservedObject var captureEngine: CaptureEngine
-    @State private var showingDirectoryPicker = false
     
     var body: some View {
         ScrollView {
@@ -103,7 +102,7 @@ private struct ConfigurationView: View {
                             .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
                     )
                 
-                OutputSection(captureEngine: captureEngine, showingDirectoryPicker: $showingDirectoryPicker)
+                OutputSection(captureEngine: captureEngine)
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
@@ -126,10 +125,6 @@ private struct ConfigurationView: View {
             .padding(20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .sheet(isPresented: $showingDirectoryPicker) {
-            DirectoryPickerView(captureEngine: captureEngine)
-                .frame(width: 500, height: 350)
-        }
     }
 }
 
@@ -852,7 +847,6 @@ private struct CustomAreaEditor: View {
 
 private struct OutputSection: View {
     @ObservedObject var captureEngine: CaptureEngine
-    @Binding var showingDirectoryPicker: Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -880,15 +874,19 @@ private struct OutputSection: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .help(captureEngine.saveDirectory.path)
                         
-                        Button {
-                            showingDirectoryPicker = true
-                        } label: {
-                            Image(systemName: "pencil.circle.fill")
-                                .font(.title3)
-                                .foregroundColor(.accentColor)
+                        Button("Choose Folder...") {
+                            let panel = NSOpenPanel()
+                            panel.canChooseDirectories = true
+                            panel.canChooseFiles = false
+                            panel.allowsMultipleSelection = false
+                            panel.begin { response in
+                                if response == .OK, let url = panel.url {
+                                    captureEngine.saveDirectory = url
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .help("Change save location")
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
                 }
                 

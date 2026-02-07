@@ -307,7 +307,10 @@ private struct TargetSourceSection: View {
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
+                
+                Spacer()
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.bottom, 16)
             
             if captureEngine.selectedAppPID != nil {

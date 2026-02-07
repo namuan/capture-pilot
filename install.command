@@ -24,8 +24,16 @@ CONTENTS_DIR="$APP_BUNDLE/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 
-echo "Creating App Bundle at $APP_BUNDLE..."
-rm -rf "$APP_BUNDLE"
+# Update instead of delete
+if [ -d "$APP_BUNDLE" ]; then
+    echo "Updating existing app bundle..."
+    rm -f "$MACOS_DIR/$APP_NAME"
+else
+    echo "Creating new app bundle..."
+    mkdir -p "$MACOS_DIR"
+    mkdir -p "$RESOURCES_DIR"
+fi
+
 mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
 
@@ -87,6 +95,10 @@ EOF
 
 # Copy Resources if they exist (SwiftPM puts them in a bundle usually, but for simple exec we might need to handle manual copies if we had assets)
 # For now, we don't have distinct resources to copy outside the binary's resource bundle if configured.
+
+# Code sign the app bundle
+echo "Code signing app bundle..."
+codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "Installation complete! Launch CapturePilot from $APP_BUNDLE"
 echo "To open: open $APP_BUNDLE"

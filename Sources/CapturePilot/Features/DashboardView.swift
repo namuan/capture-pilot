@@ -22,15 +22,26 @@ struct DashboardView: View {
         NavigationView {
             List {
                 ForEach(sessions, id: \.id) { session in
-                    NavigationLink(destination: SessionDetailView(session: session), tag: session, selection: $selectedSession) {
-                        VStack(alignment: .leading) {
-                            Text(session.date, style: .date)
-                                .font(.headline)
-                            Text(session.path)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    Button {
+                        selectedSession = session
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(session.date, style: .date)
+                                    .font(.headline)
+                                Text(session.path)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if selectedSession == session {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.blue)
+                            }
                         }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                     .contextMenu {
                         Button(role: .destructive) {
                             sessionsToDelete = [session]
@@ -62,8 +73,13 @@ struct DashboardView: View {
                 Text("This will permanently remove the session and all captured images from the disk. This action cannot be undone.")
             }
             
-            Text("Select a session")
-                .foregroundStyle(.secondary)
+            // Show default message when no session is selected or no sessions exist
+            if let session = selectedSession, sessions.contains(where: { $0.id == session.id }) {
+                SessionDetailView(session: session)
+            } else {
+                Text(sessions.isEmpty ? "No sessions available" : "Select a session")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
     

@@ -103,7 +103,7 @@ private struct ConfigurationView: View {
                             .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
                     )
                 
-                TargetSourceSection(captureEngine: captureEngine)
+                OutputSection(captureEngine: captureEngine, showingDirectoryPicker: $showingDirectoryPicker)
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
@@ -111,7 +111,7 @@ private struct ConfigurationView: View {
                             .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
                     )
                 
-                OutputSection(captureEngine: captureEngine, showingDirectoryPicker: $showingDirectoryPicker)
+                TargetSourceSection(captureEngine: captureEngine)
                     .padding(16)
                     .background(
                         RoundedRectangle(cornerRadius: 16)

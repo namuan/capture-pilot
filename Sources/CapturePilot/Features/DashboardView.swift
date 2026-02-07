@@ -235,10 +235,27 @@ struct SessionRow: View {
             }
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color(NSColor.windowBackgroundColor)).shadow(color: isSelected ? Color.accentColor.opacity(0.12) : Color.clear, radius: 8, x: 0, y: 4))
+        // subtle selected-state treatment: add a faint accent stroke and
+        // very light tint when this row is the active selection. Keep the
+        // stronger shadow only for multi-select (isSelected) to avoid
+        // visual noise.
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(NSColor.windowBackgroundColor))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isActive ? Color.accentColor.opacity(0.14) : Color.clear, lineWidth: 1)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(isActive ? Color.accentColor.opacity(0.03) : Color.clear)
+                )
+                .shadow(color: isSelected ? Color.accentColor.opacity(0.12) : Color.clear, radius: 8, x: 0, y: 4)
+        )
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.18)) { isHover = hovering } }
         .onAppear { loadMetadata() }
         .animation(.easeInOut(duration: 0.18), value: isSelected)
+        .animation(.easeInOut(duration: 0.18), value: isActive)
     }
 
     private func loadMetadata() {

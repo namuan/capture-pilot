@@ -6,9 +6,11 @@ struct DashboardView: View {
     @State private var showingDeleteAlert = false
     @State private var sessionsToDelete: [CaptureSession]?
     @State private var selectedSession: CaptureSession?
-    
+    @State private var selectedSessions = Set<UUID>()
+    @State private var isMultiSelectMode = false
+
     // Fetch sessions
-    // Note: Since we are not using standard Xcode gen, we might need a manual FetchRequest if the class isn't found, 
+    // Note: Since we are not using standard Xcode gen, we might need a manual FetchRequest if the class isn't found,
     // but usually FetchRequest works if the class is registered.
     // For MVP transparency, I'll simulate a list or use a simpler persistence if Core Data gives trouble in this setup.
     // But let's try standard.
@@ -20,12 +22,23 @@ struct DashboardView: View {
     
     var body: some View {
         NavigationView {
-            List {
+            List(selection: $selectedSessions) {
                 ForEach(sessions, id: \.id) { session in
                     Button {
-                        selectedSession = session
+                        if isMultiSelectMode {
+                            toggleSessionSelection(session)
+                        } else {
+                            selectedSession = session
+                        }
                     } label: {
                         HStack {
+                            if isMultiSelectMode {
+                                Image(systemName: selectedSessions.contains(session.id) ? "checkmark.square.fill" : "square")
+                                    .foregroundColor(selectedSessions.contains(session.id) ? .accentColor : .secondary)
+                                    .font(.system(size: 16))
+                                    .frame(width: 24)
+                            }
+
                             VStack(alignment: .leading) {
                                 Text(session.date, style: .date)
                                     .font(.headline)
@@ -35,7 +48,7 @@ struct DashboardView: View {
                                     .lineLimit(1)
                             }
                             Spacer()
-                            if selectedSession == session {
+                            if !isMultiSelectMode && selectedSession == session {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(.blue)
                             }
@@ -43,24 +56,64 @@ struct DashboardView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .listRowBackground(selectedSessions.contains(session.id) && isMultiSelectMode ? Color.accentColor.opacity(0.1) : Color.clear)
                     .contextMenu {
-                        Button(role: .destructive) {
-                            sessionsToDelete = [session]
-                            showingDeleteAlert = true
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+                        if !isMultiSelectMode {
+                            Button(role: .destructive) {
+                                sessionsToDelete = [session]
+                                showingDeleteAlert = true
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                     }
                 }
-                .onDelete(perform: deleteItems)
             }
             .listStyle(.sidebar)
-            .frame(minWidth: 250)
-            .navigationTitle("Sessions")
+            .frame(minWidth: 280)
+            .navigationTitle(isMultiSelectMode ? "\(selectedSessions.count) Selected" : "Sessions")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button(action: { showingNewSession = true }) {
-                        Label("New Session", systemImage: "plus")
+                    HStack(spacing: 12) {
+                        if isMultiSelectMode {
+                            Button(role: .destructive) {
+                                sessionsToDelete = sessions.filter { selectedSessions.contains($0.id) }
+                                showingDeleteAlert = true
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .disabled(selectedSessions.isEmpty)
+
+                            Button {
+                                if selectedSessions.count == sessions.count {
+                                    selectedSessions.removeAll()
+                                } else {
+                                    selectedSessions = Set(sessions.map { $0.id })
+                                }
+                            } label: {
+                                Image(systemName: selectedSessions.count == sessions.count ? "minus.square" : "checkmark.square")
+                            }
+                            .disabled(sessions.isEmpty)
+
+                            Button {
+                                isMultiSelectMode = false
+                                selectedSessions.removeAll()
+                            } label: {
+                                Text("Done")
+                            }
+                            .keyboardShortcut(.escape, modifiers: [])
+                        } else {
+                            Button {
+                                isMultiSelectMode = true
+                                selectedSessions.removeAll()
+                            } label: {
+                                Label("Select", systemImage: "checkmark.circle")
+                            }
+
+                            Button(action: { showingNewSession = true }) {
+                                Label("New Session", systemImage: "plus")
+                            }
+                        }
                     }
                 }
             }
@@ -72,13 +125,13 @@ struct DashboardView: View {
             }) {
                 SessionConfigView()
             }
-            .alert("Delete Session?", isPresented: $showingDeleteAlert, presenting: sessionsToDelete) { sessions in
+            .alert("Delete \(sessionsToDelete?.count == 1 ? "Session" : "Sessions")?", isPresented: $showingDeleteAlert, presenting: sessionsToDelete) { sessions in
                 Button("Delete", role: .destructive) {
                     performDelete(sessions)
                 }
                 Button("Cancel", role: .cancel) {}
-            } message: { _ in
-                Text("This will permanently remove the session and all captured images from the disk. This action cannot be undone.")
+            } message: { sessions in
+                Text("This will permanently remove \(sessions.count) session(s) and all captured images from the disk. This action cannot be undone.")
             }
             
             // Detail view area
@@ -119,25 +172,39 @@ struct DashboardView: View {
         sessionsToDelete = offsets.map { sessions[$0] }
         showingDeleteAlert = true
     }
-    
-    private func performDelete(_ sessions: [CaptureSession]) {
+
+    private func toggleSessionSelection(_ session: CaptureSession) {
+        if selectedSessions.contains(session.id) {
+            selectedSessions.remove(session.id)
+        } else {
+            selectedSessions.insert(session.id)
+        }
+    }
+
+    private func performDelete(_ sessionsToRemove: [CaptureSession]) {
         withAnimation {
-            for session in sessions {
+            for session in sessionsToRemove {
                 if session == selectedSession {
                     selectedSession = nil
                 }
-                
+
                 // Delete folder
                 let path = session.path
                 if !path.isEmpty && FileManager.default.fileExists(atPath: path) {
                     try? FileManager.default.removeItem(atPath: path)
                 }
-                
+
                 // Delete from Core Data
                 PersistenceController.shared.container.viewContext.delete(session)
             }
-            
+
             try? PersistenceController.shared.container.viewContext.save()
+
+            // Clear selection after delete
+            if isMultiSelectMode {
+                selectedSessions.removeAll()
+                isMultiSelectMode = false
+            }
         }
     }
 }

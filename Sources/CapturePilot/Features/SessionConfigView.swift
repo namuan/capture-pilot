@@ -15,6 +15,14 @@ struct SessionConfigView: View {
             }
         }
         .frame(width: 680, height: 580, alignment: .topLeading)
+        .onAppear {
+            captureEngine.onCaptureStopped = {
+                dismiss()
+            }
+        }
+        .onDisappear {
+            captureEngine.onCaptureStopped = nil
+        }
     }
 }
 
@@ -90,15 +98,6 @@ private struct CapturingView: View {
                 // Stop button
                 Button(action: {
                     captureEngine.stopCapture()
-                    if let folder = captureEngine.currentSessionFolder {
-                        let viewContext = PersistenceController.shared.container.viewContext
-                        let newSession = CaptureSession(context: viewContext)
-                        newSession.id = UUID()
-                        newSession.date = Date()
-                        newSession.path = folder.path
-                        try? viewContext.save()
-                    }
-                    dismiss()
                 }) {
                     Label("Stop Session", systemImage: "stop.fill")
                         .frame(minWidth: 180)

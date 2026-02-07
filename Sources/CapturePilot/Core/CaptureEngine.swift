@@ -31,6 +31,8 @@ class CaptureEngine: ObservableObject {
     @Published var hideWindowOnCapture: Bool = true
     var saveDirectory: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures/CapturePilot")
     
+    var onCaptureStopped: (() -> Void)?
+    
     private let automationEngine = AutomationEngine()
     private let windowManager = WindowManager.shared
     private let menuBarManager = MenuBarManager.shared
@@ -98,9 +100,23 @@ class CaptureEngine: ObservableObject {
         timer?.invalidate()
         timer = nil
         
+        // Save session to Core Data
+        if let folder = currentSessionFolder {
+            let viewContext = PersistenceController.shared.container.viewContext
+            let newSession = CaptureSession(context: viewContext)
+            newSession.id = UUID()
+            newSession.date = Date()
+            newSession.path = folder.path
+            try? viewContext.save()
+        }
+        
         // Hide menu bar and show window
         menuBarManager.updateCapturingState(false)
         menuBarManager.hideMenuBar()
+        
+        // Call the callback to dismiss the view
+        onCaptureStopped?()
+        
         windowManager.showWindow()
     }
     

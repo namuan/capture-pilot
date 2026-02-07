@@ -249,28 +249,28 @@ struct SessionRow: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color(NSColor.windowBackgroundColor))
 
-                // faint tint + stroke when active — increase slightly for clarity
+                // stronger tint + stroke when active to make selection bolder
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.accentColor.opacity(isActive ? 0.06 : 0))
+                    .fill(Color.accentColor.opacity(isActive ? 0.12 : 0))
 
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.accentColor.opacity(isActive ? 0.22 : 0), lineWidth: 1)
+                    .stroke(Color.accentColor.opacity(isActive ? 0.34 : 0), lineWidth: 1.5)
 
-                // left accent bar for stronger affordance; wider when active
-                Rectangle()
-                    .fill(Color.accentColor)
-                    .frame(width: isActive ? 6 : 0)
-                    .cornerRadius(2)
-                    .padding(.vertical, 6)
-                    .animation(.easeInOut(duration: 0.18), value: isActive)
+                // stronger glow for active rows (soft, centered shadow)
+                if isActive {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.accentColor.opacity(0.08))
+                        .shadow(color: Color.accentColor.opacity(0.18), radius: 14, x: 0, y: 0)
+                        .padding(0)
+                }
             }
         )
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.18)) { isHover = hovering } }
         .onAppear { loadMetadata() }
         .animation(.easeInOut(duration: 0.18), value: isSelected)
         .animation(.easeInOut(duration: 0.18), value: isActive)
-        // subtle lift for active row
-        .scaleEffect(isActive ? 1.007 : 1.0)
+        // stronger lift for active row to give clearer affordance
+        .scaleEffect(isActive ? 1.012 : 1.0)
     }
 
     private func loadMetadata() {

@@ -103,4 +103,3 @@ codesign --force --deep --sign - "$APP_BUNDLE"
 echo "Installation complete! Launch CapturePilot from $APP_BUNDLE"
 tccutil reset ScreenCapture com.example.CapturePilot
 open $APP_BUNDLE
-

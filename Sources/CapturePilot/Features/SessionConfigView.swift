@@ -84,6 +84,8 @@ private struct ConfigurationView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             
+            Spacer()
+            
             StartCaptureButton(captureEngine: captureEngine)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -151,6 +153,7 @@ private struct TargetSourceSection: View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 captureTypePicker
+                    .padding(.top, 8)
                 
                 if captureEngine.selectedAppPID != nil {
                     appPicker

@@ -14,7 +14,7 @@ struct SessionConfigView: View {
                 ConfigurationView(captureEngine: captureEngine)
             }
         }
-        .frame(width: 680, height: 580, alignment: .topLeading)
+        .frame(width: 900, height: 600, alignment: .topLeading)
         .onAppear {
             captureEngine.onCaptureStopped = {
                 dismiss()
@@ -120,7 +120,8 @@ private struct ConfigurationView: View {
     @ObservedObject var captureEngine: CaptureEngine
     
     var body: some View {
-        ScrollView {
+        HStack(spacing: 20) {
+            // Left column - 40% width
             VStack(spacing: 20) {
                 CaptureSettingsSection(captureEngine: captureEngine)
                     .padding(16)
@@ -138,14 +139,6 @@ private struct ConfigurationView: View {
                             .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
                     )
                 
-                TargetSourceSection(captureEngine: captureEngine)
-                    .padding(16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(NSColor.controlBackgroundColor))
-                            .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
-                    )
-                
                 ShortcutsSection(captureEngine: captureEngine)
                     .padding(16)
                     .background(
@@ -154,10 +147,25 @@ private struct ConfigurationView: View {
                             .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
                     )
                 
-                Spacer(minLength: 20)
+                Spacer()
             }
-            .padding(20)
+            .frame(width: 280)
+            
+            // Right column - 60% width
+            VStack(spacing: 20) {
+                TargetSourceSection(captureEngine: captureEngine)
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(NSColor.controlBackgroundColor))
+                            .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
+                    )
+                
+                Spacer()
+            }
+            .frame(maxWidth: .infinity)
         }
+        .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
@@ -218,8 +226,9 @@ private struct CaptureSettingsSection: View {
         VStack(alignment: .leading, spacing: 16) {
             SectionHeaderView(icon: "camera.fill", title: "Capture Settings")
             
-            VStack(spacing: 12) {
-                HStack(alignment: .center, spacing: 12) {
+            VStack(spacing: 16) {
+                // Interval setting - single row layout
+                HStack(alignment: .center, spacing: 8) {
                     Image(systemName: "clock.fill")
                         .foregroundColor(.accentColor)
                         .frame(width: 24)
@@ -229,7 +238,7 @@ private struct CaptureSettingsSection: View {
                         .fontWeight(.medium)
                     
                     TextField("", value: $captureEngine.interval, format: .number)
-                        .frame(width: 60)
+                        .frame(width: 55)
                         .textFieldStyle(.roundedBorder)
                         .multilineTextAlignment(.trailing)
                         .padding(.horizontal, 4)
@@ -240,13 +249,14 @@ private struct CaptureSettingsSection: View {
                     Text("seconds")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .frame(width: 50)
                     
                     Spacer()
-                    
-                    Divider()
-                        .frame(height: 24)
-                    
+                }
+                
+                Divider()
+                
+                // Auto-Key setting - single row layout
+                HStack(alignment: .center, spacing: 8) {
                     Image(systemName: "keyboard.fill")
                         .foregroundColor(.accentColor)
                         .frame(width: 24)
@@ -266,7 +276,7 @@ private struct CaptureSettingsSection: View {
                     }
                     .pickerStyle(.menu)
                     .labelsHidden()
-                    .frame(width: 140)
+                    .frame(maxWidth: .infinity)
                     .buttonStyle(.bordered)
                 }
             }
@@ -314,9 +324,10 @@ private struct TargetSourceSection: View {
         )
     }
     
-var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 12) {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Section header
+            HStack(spacing: 8) {
                 Image(systemName: "viewfinder")
                     .font(.callout)
                     .foregroundColor(.accentColor)
@@ -326,32 +337,61 @@ var body: some View {
                             .fill(Color.accentColor.opacity(0.15))
                     )
                 
-                Picker("Type:", selection: captureTypeBinding) {
-                    Label("Fullscreen", systemImage: "rectangle.fill")
-                        .tag("Fullscreen")
-                    Label("Application", systemImage: "app.fill")
-                        .tag("App")
-                    Label("Custom Area", systemImage: "crop")
-                        .tag("Custom")
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(height: 36)
+                Text("Target Source")
+                    .font(.callout)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
                 
                 Spacer()
-                
+            }
+            
+            // Tabs
+            Picker("Type:", selection: captureTypeBinding) {
+                Label("Fullscreen", systemImage: "rectangle.fill")
+                    .tag("Fullscreen")
+                Label("Application", systemImage: "app.fill")
+                    .tag("App")
+                Label("Custom Area", systemImage: "crop")
+                    .tag("Custom")
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(height: 36)
+            
+            // Tab content
+            VStack(spacing: 0) {
+                if captureEngine.selectedAppPID != nil {
+                    appPicker
+                        .transition(.opacity)
+                } else if captureEngine.captureRect != nil {
+                    CustomAreaEditor(captureEngine: captureEngine)
+                        .transition(.opacity)
+                } else {
+                    // Fullscreen content
+                    VStack(spacing: 12) {
+                        Image(systemName: "display.2")
+                            .font(.largeTitle)
+                            .foregroundColor(.secondary)
+                        Text("Capture will include the entire screen")
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(height: 280)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(NSColor.textBackgroundColor).opacity(0.3))
+                    )
+                }
+            }
+            .frame(maxWidth: .infinity)
+            
+            // Start button at bottom
+            HStack {
+                Spacer()
                 StartCaptureButton(captureEngine: captureEngine)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.bottom, 16)
-            
-            if captureEngine.selectedAppPID != nil {
-                appPicker
-                    .transition(.opacity)
-            } else if captureEngine.captureRect != nil {
-                CustomAreaEditor(captureEngine: captureEngine)
-                    .transition(.opacity)
-            }
+            .padding(.top, 8)
         }
     }
     
@@ -898,18 +938,13 @@ private struct OutputSection: View {
                     )
                 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Save To")
-                        .font(.callout)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                    
                     HStack(spacing: 8) {
-                        Text(captureEngine.saveDirectory.path)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .help(captureEngine.saveDirectory.path)
+                        Text("Save To")
+                            .font(.callout)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
                         
                         Button("Choose Folder...") {
                             let panel = NSOpenPanel()
@@ -925,6 +960,13 @@ private struct OutputSection: View {
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                     }
+                    
+                    Text(captureEngine.saveDirectory.path)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .help(captureEngine.saveDirectory.path)
                 }
                 
                 Spacer()

@@ -214,8 +214,7 @@ struct SessionRow: View {
             .clipped()
             .shadow(color: isHover ? Color.black.opacity(0.25) : Color.black.opacity(0.12), radius: isHover ? 8 : 4, x: 0, y: isHover ? 6 : 2)
             // subtle list-side animation when the row becomes active (selection)
-            .opacity(isActive ? 0.78 : 1.0)
-            .scaleEffect(isActive ? 0.985 : 1.0)
+            // Keep the thumbnail fully opaque when active — do not fade it.
             .animation(.easeInOut(duration: 0.18), value: isActive)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -240,30 +239,14 @@ struct SessionRow: View {
             }
         }
         .padding(8)
-        // subtle selected-state treatment: add a faint accent stroke and
-        // very light tint when this row is the active selection. Keep the
-        // stronger shadow only for multi-select (isSelected) to avoid
-        // visual noise.
+        // simpler background: single rounded rect with optional tint/stroke
+        // and glow when active. No left accent bar or reserved space.
         .background(
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(NSColor.windowBackgroundColor))
-
-                // stronger tint + stroke when active to make selection bolder
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.accentColor.opacity(isActive ? 0.12 : 0))
-
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.accentColor.opacity(isActive ? 0.34 : 0), lineWidth: 1.5)
-
-                // stronger glow for active rows (soft, centered shadow)
-                if isActive {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.accentColor.opacity(0.08))
-                        .shadow(color: Color.accentColor.opacity(0.18), radius: 14, x: 0, y: 0)
-                        .padding(0)
-                }
-            }
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(NSColor.windowBackgroundColor))
+                .overlay(RoundedRectangle(cornerRadius: 12).fill(Color.accentColor.opacity(isActive ? 0.12 : 0)))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.accentColor.opacity(isActive ? 0.34 : 0), lineWidth: 1.5))
+                .overlay(Group { if isActive { RoundedRectangle(cornerRadius: 12).fill(Color.accentColor.opacity(0.08)).shadow(color: Color.accentColor.opacity(0.18), radius: 14, x: 0, y: 0) } })
         )
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.18)) { isHover = hovering } }
         .onAppear { loadMetadata() }

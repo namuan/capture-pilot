@@ -376,6 +376,7 @@ private struct TargetSourceSection: View {
             HStack {
                 Spacer()
                 StartCaptureButton(captureEngine: captureEngine)
+                Spacer()
             }
             .padding(.top, 8)
         }

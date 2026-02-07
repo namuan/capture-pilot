@@ -219,8 +219,13 @@ struct SessionRow: View {
             .animation(.easeInOut(duration: 0.18), value: isActive)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(session.date, style: .date).font(.headline)
-                Text(session.path).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(session.date, style: .date)
+                    .font(.headline)
+                    .fontWeight(isActive ? .semibold : .regular)
+                Text(session.path)
+                    .font(.caption)
+                    .foregroundStyle(isActive ? .primary : .secondary)
+                    .lineLimit(1)
             }
 
             Spacer()
@@ -240,22 +245,32 @@ struct SessionRow: View {
         // stronger shadow only for multi-select (isSelected) to avoid
         // visual noise.
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(NSColor.windowBackgroundColor))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isActive ? Color.accentColor.opacity(0.14) : Color.clear, lineWidth: 1)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(isActive ? Color.accentColor.opacity(0.03) : Color.clear)
-                )
-                .shadow(color: isSelected ? Color.accentColor.opacity(0.12) : Color.clear, radius: 8, x: 0, y: 4)
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(NSColor.windowBackgroundColor))
+
+                // faint tint + stroke when active — increase slightly for clarity
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.accentColor.opacity(isActive ? 0.06 : 0))
+
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.accentColor.opacity(isActive ? 0.22 : 0), lineWidth: 1)
+
+                // left accent bar for stronger affordance; wider when active
+                Rectangle()
+                    .fill(Color.accentColor)
+                    .frame(width: isActive ? 6 : 0)
+                    .cornerRadius(2)
+                    .padding(.vertical, 6)
+                    .animation(.easeInOut(duration: 0.18), value: isActive)
+            }
         )
         .onHover { hovering in withAnimation(.easeInOut(duration: 0.18)) { isHover = hovering } }
         .onAppear { loadMetadata() }
         .animation(.easeInOut(duration: 0.18), value: isSelected)
         .animation(.easeInOut(duration: 0.18), value: isActive)
+        // subtle lift for active row
+        .scaleEffect(isActive ? 1.007 : 1.0)
     }
 
     private func loadMetadata() {

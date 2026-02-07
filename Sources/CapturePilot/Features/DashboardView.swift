@@ -419,6 +419,7 @@ struct ImagePreviewView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .focusable(false)
 
                 Spacer()
 

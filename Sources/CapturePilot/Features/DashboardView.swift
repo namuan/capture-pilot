@@ -284,6 +284,7 @@ struct SessionDetailView: View {
     @State private var selectedImageIndex: Int? = nil
     @State private var isLoading = true
     @StateObject private var videoExporter = VideoExporter.shared
+    @State private var showExportSuccess = false
 
     private let columns = [ GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16) ]
 
@@ -324,7 +325,16 @@ struct SessionDetailView: View {
                         .buttonStyle(.plain)
                         .help("Open Folder")
 
-                        Button(action: { videoExporter.exportSession(sessionPath: session.path) { _ in } }) {
+                        Button(action: { 
+                            videoExporter.exportSession(sessionPath: session.path) { result in
+                                switch result {
+                                case .success:
+                                    showExportSuccess = true
+                                case .failure(let error):
+                                    print("Export failed: \(error.localizedDescription)")
+                                }
+                            } 
+                        }) {
                             Label("Export Video", systemImage: "video")
                         }
                     }
@@ -354,6 +364,14 @@ struct SessionDetailView: View {
         .onChange(of: session.path) { _ in loadImages() }
         .sheet(isPresented: Binding(get: { selectedImageIndex != nil }, set: { if !$0 { selectedImageIndex = nil } })) {
             if selectedImageIndex != nil { ImagePreviewView(images: $images, currentIndex: selectedImageBinding) }
+        }
+        .alert("Export Complete", isPresented: $showExportSuccess) {
+            Button("Open Folder") {
+                NSWorkspace.shared.open(URL(fileURLWithPath: session.path))
+            }
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Your video has been successfully exported as session.mp4")
         }
     }
 

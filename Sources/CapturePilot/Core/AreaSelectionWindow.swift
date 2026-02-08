@@ -4,8 +4,9 @@ import SwiftUI
 class AreaSelectionWindow: NSObject {
     static let shared = AreaSelectionWindow()
     
-    private var window: NSWindow?
+    private var windows: [NSWindow] = []
     private var completionHandler: ((CGRect?) -> Void)?
+    private var isCompleted = false
     
     private override init() {
         super.init()
@@ -13,96 +14,136 @@ class AreaSelectionWindow: NSObject {
     
     func selectArea(completion: @escaping (CGRect?) -> Void) {
         completionHandler = completion
+        isCompleted = false
         
         DispatchQueue.main.async { [weak self] in
-            self?.showSelectionWindow()
+            self?.showSelectionWindows()
         }
     }
     
-    private func showSelectionWindow() {
-        guard let screen = NSScreen.main else {
+    private func showSelectionWindows() {
+        let screens = NSScreen.screens
+        guard !screens.isEmpty else {
             completeWithResult(nil)
             return
         }
         
-        let screenFrame = screen.frame
-        
-        let window = NSWindow(
-            contentRect: screenFrame,
-            styleMask: [.borderless],
-            backing: .buffered,
-            defer: false,
-            screen: screen
-        )
-        
-        window.level = .screenSaver
-        window.backgroundColor = .clear
-        window.isOpaque = false
-        window.ignoresMouseEvents = false
-        window.hasShadow = false
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        window.hidesOnDeactivate = false
-        window.acceptsMouseMovedEvents = true
-        
-        let selectionView = AreaSelectionNSView(frame: NSRect(origin: .zero, size: screenFrame.size))
-        selectionView.onCancel = { [weak self] in
-            self?.completeWithResult(nil)
+        for screen in screens {
+            let screenFrame = screen.frame
+            
+            let window = NSWindow(
+                contentRect: NSRect(origin: .zero, size: screenFrame.size),
+                styleMask: [.borderless],
+                backing: .buffered,
+                defer: false,
+                screen: screen
+            )
+            
+            window.level = .screenSaver
+            window.backgroundColor = .clear
+            window.isOpaque = false
+            window.ignoresMouseEvents = false
+            window.hasShadow = false
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            window.hidesOnDeactivate = false
+            window.acceptsMouseMovedEvents = true
+            
+            window.setFrameOrigin(screenFrame.origin)
+            
+            let screenIndex = screens.firstIndex(of: screen) ?? 0
+            let totalScreens = screens.count
+            
+            let selectionView = SingleScreenSelectionView(
+                frame: NSRect(origin: .zero, size: screenFrame.size),
+                screen: screen,
+                screenIndex: screenIndex,
+                totalScreens: totalScreens
+            )
+            selectionView.onCancel = { [weak self] in
+                self?.completeWithResult(nil)
+            }
+            selectionView.onComplete = { [weak self] rect in
+                self?.completeWithResult(rect)
+            }
+            
+            window.contentView = selectionView
+            windows.append(window)
+            
+            window.makeKeyAndOrderFront(nil)
         }
-        selectionView.onComplete = { [weak self] rect in
-            self?.completeWithResult(rect)
+        
+        if let firstWindow = windows.first {
+            firstWindow.makeKey()
         }
-        
-        window.contentView = selectionView
-        self.window = window
-        
-        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
     
     private func completeWithResult(_ rect: CGRect?) {
+        guard !isCompleted else { return }
+        isCompleted = true
+        
         let handler = completionHandler
         completionHandler = nil
         
-        guard let window = window else { return }
-        self.window = nil
+        let windowsToClose = windows
+        windows = []
         
-        window.orderOut(nil)
+        for window in windowsToClose {
+            window.orderOut(nil)
+        }
         
-        DispatchQueue.main.async {
-            if let rect = rect {
-                if let screen = NSScreen.main {
-                    let screenFrame = screen.frame
-                    let convertedRect = CGRect(
-                        x: rect.origin.x,
-                        y: screenFrame.height - rect.origin.y - rect.height,
-                        width: rect.width,
-                        height: rect.height
-                    )
-                    handler?(convertedRect)
-                } else {
-                    handler?(rect)
-                }
-            } else {
-                handler?(nil)
-            }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            handler?(rect)
         }
     }
 }
 
-private class AreaSelectionNSView: NSView {
+private class SingleScreenSelectionView: NSView {
     var onCancel: (() -> Void)?
     var onComplete: ((CGRect) -> Void)?
+    
+    private let screen: NSScreen
+    private let screenIndex: Int
+    private let totalScreens: Int
     
     private var startPoint: CGPoint?
     private var currentPoint: CGPoint?
     private var isDragging = false
+    private var trackingArea: NSTrackingArea?
     
-    override init(frame frameRect: NSRect) {
+    init(frame frameRect: NSRect, screen: NSScreen, screenIndex: Int, totalScreens: Int) {
+        self.screen = screen
+        self.screenIndex = screenIndex
+        self.totalScreens = totalScreens
         super.init(frame: frameRect)
+        setupTrackingArea()
     }
     
     required init?(coder: NSCoder) {
-        super.init(coder: coder)
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupTrackingArea() {
+        if let existing = trackingArea {
+            removeTrackingArea(existing)
+        }
+        
+        let options: NSTrackingArea.Options = [
+            .inVisibleRect,
+            .activeAlways,
+            .enabledDuringMouseDrag,
+            .mouseMoved
+        ]
+        
+        trackingArea = NSTrackingArea(rect: bounds, options: options, owner: self, userInfo: nil)
+        if let area = trackingArea {
+            addTrackingArea(area)
+        }
+    }
+    
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        setupTrackingArea()
     }
     
     override var acceptsFirstResponder: Bool { true }
@@ -115,8 +156,9 @@ private class AreaSelectionNSView: NSView {
     }
     
     override func mouseDown(with event: NSEvent) {
-        startPoint = convert(event.locationInWindow, from: nil)
-        currentPoint = startPoint
+        let localPoint = convert(event.locationInWindow, from: nil)
+        startPoint = localPoint
+        currentPoint = localPoint
         isDragging = true
         needsDisplay = true
     }
@@ -132,7 +174,8 @@ private class AreaSelectionNSView: NSView {
         isDragging = false
         
         if let rect = selectionRect, rect.width > 10 && rect.height > 10 {
-            onComplete?(rect)
+            let globalRect = convertToGlobalCoordinates(rect)
+            onComplete?(globalRect)
         } else {
             resetSelection()
         }
@@ -148,6 +191,16 @@ private class AreaSelectionNSView: NSView {
         )
     }
     
+    private func convertToGlobalCoordinates(_ localRect: CGRect) -> CGRect {
+        let screenFrame = screen.frame
+        return CGRect(
+            x: screenFrame.origin.x + localRect.origin.x,
+            y: screenFrame.origin.y + localRect.origin.y,
+            width: localRect.width,
+            height: localRect.height
+        )
+    }
+    
     private func resetSelection() {
         startPoint = nil
         currentPoint = nil
@@ -160,10 +213,9 @@ private class AreaSelectionNSView: NSView {
         NSColor.black.withAlphaComponent(0.3).setFill()
         bounds.fill()
         
+        drawScreenIndicator()
+        
         if let rect = selectionRect {
-            NSColor.black.withAlphaComponent(0.3).setFill()
-            NSBezierPath(rect: bounds).fill()
-            
             NSColor.clear.setFill()
             NSBezierPath(rect: rect).fill()
             
@@ -173,36 +225,41 @@ private class AreaSelectionNSView: NSView {
             borderPath.stroke()
             
             drawCornerHandles(in: rect)
-            
-            let sizeText = "\(Int(rect.width)) × \(Int(rect.height))" as NSString
-            let textSize = sizeText.size(withAttributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium),
-                .foregroundColor: NSColor.white
-            ])
-            
-            let textBackgroundRect = NSRect(
-                x: rect.midX - textSize.width / 2 - 8,
-                y: rect.maxY + 8,
-                width: textSize.width + 16,
-                height: textSize.height + 8
-            )
-            
-            NSColor.black.withAlphaComponent(0.7).setFill()
-            NSBezierPath(roundedRect: textBackgroundRect, xRadius: 4, yRadius: 4).fill()
-            
-            let textRect = NSRect(
-                x: textBackgroundRect.origin.x + 8,
-                y: textBackgroundRect.origin.y + 4,
-                width: textSize.width,
-                height: textSize.height
-            )
-            sizeText.draw(in: textRect, withAttributes: [
-                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium),
-                .foregroundColor: NSColor.white
-            ])
+            drawSizeLabel(in: rect)
         }
         
         drawInstructions()
+    }
+    
+    private func drawScreenIndicator() {
+        let screenNumber = screenIndex + 1
+        let indicatorSize: CGFloat = 40
+        let indicatorRect = NSRect(
+            x: bounds.midX - indicatorSize / 2,
+            y: bounds.midY - indicatorSize / 2,
+            width: indicatorSize,
+            height: indicatorSize
+        )
+        
+        NSColor.black.withAlphaComponent(0.5).setFill()
+        NSBezierPath(roundedRect: indicatorRect.insetBy(dx: -4, dy: -4), xRadius: 8, yRadius: 8).fill()
+        
+        let numberText = "\(screenNumber)" as NSString
+        let textStyle = NSMutableParagraphStyle()
+        textStyle.alignment = .center
+        
+        let textRect = NSRect(
+            x: indicatorRect.origin.x,
+            y: indicatorRect.origin.y + (indicatorRect.height - 28) / 2,
+            width: indicatorRect.width,
+            height: 28
+        )
+        
+        numberText.draw(in: textRect, withAttributes: [
+            .font: NSFont.systemFont(ofSize: 28, weight: .bold),
+            .foregroundColor: NSColor.white.withAlphaComponent(0.4),
+            .paragraphStyle: textStyle
+        ])
     }
     
     private func drawCornerHandles(in rect: CGRect) {
@@ -222,7 +279,6 @@ private class AreaSelectionNSView: NSView {
                 height: handleSize
             )
             
-            NSBezierPath(roundedRect: handleRect, xRadius: 2, yRadius: 2).fill()
             NSColor.white.setFill()
             NSBezierPath(roundedRect: handleRect, xRadius: 2, yRadius: 2).fill()
             
@@ -237,8 +293,38 @@ private class AreaSelectionNSView: NSView {
         }
     }
     
+    private func drawSizeLabel(in rect: CGRect) {
+        let sizeText = "\(Int(rect.width)) × \(Int(rect.height))" as NSString
+        let textSize = sizeText.size(withAttributes: [
+            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium),
+            .foregroundColor: NSColor.white
+        ])
+        
+        let textBackgroundRect = NSRect(
+            x: rect.midX - textSize.width / 2 - 8,
+            y: rect.maxY + 8,
+            width: textSize.width + 16,
+            height: textSize.height + 8
+        )
+        
+        NSColor.black.withAlphaComponent(0.7).setFill()
+        NSBezierPath(roundedRect: textBackgroundRect, xRadius: 4, yRadius: 4).fill()
+        
+        let textRect = NSRect(
+            x: textBackgroundRect.origin.x + 8,
+            y: textBackgroundRect.origin.y + 4,
+            width: textSize.width,
+            height: textSize.height
+        )
+        sizeText.draw(in: textRect, withAttributes: [
+            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium),
+            .foregroundColor: NSColor.white
+        ])
+    }
+    
     private func drawInstructions() {
-        let instruction = "Drag to select area • Press ESC to cancel" as NSString
+        let monitorText = totalScreens > 1 ? "Multiple displays (\(screenIndex + 1)/\(totalScreens)) • " : ""
+        let instruction = "\(monitorText)Drag to select • ESC to cancel" as NSString
         
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
@@ -260,8 +346,7 @@ private class AreaSelectionNSView: NSView {
         )
         
         NSColor.black.withAlphaComponent(0.6).setFill()
-        let bgPath = NSBezierPath(roundedRect: bgRect, xRadius: 6, yRadius: 6)
-        bgPath.fill()
+        NSBezierPath(roundedRect: bgRect, xRadius: 6, yRadius: 6).fill()
         
         let textRect = NSRect(
             x: bgRect.origin.x + padding,

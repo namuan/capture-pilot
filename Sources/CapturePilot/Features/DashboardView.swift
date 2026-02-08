@@ -309,7 +309,7 @@ struct SessionDetailView: View {
         .onAppear { loadImages() }
         .onChange(of: session.path) { _ in loadImages() }
         .sheet(isPresented: Binding(get: { selectedImageIndex != nil }, set: { if !$0 { selectedImageIndex = nil } })) {
-            if selectedImageIndex != nil { ImagePreviewView(images: images, currentIndex: selectedImageBinding) }
+            if selectedImageIndex != nil { ImagePreviewView(images: $images, currentIndex: selectedImageBinding) }
         }
     }
 
@@ -349,13 +349,14 @@ struct ScreenshotThumbnail: View {
 }
 
 struct ImagePreviewView: View {
-    let images: [URL]
+    @Binding var images: [URL]
     @Binding var currentIndex: Int
     @Environment(\.dismiss) private var dismiss
     @State private var image: NSImage? = nil
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
     @State private var isTransitioning = false
+    @State private var showingDeleteAlert = false
 
     private var currentImageURL: URL { images[currentIndex] }
     private var canGoPrevious: Bool { currentIndex > 0 }
@@ -381,6 +382,9 @@ struct ImagePreviewView: View {
                     } label: { Image(systemName: "doc.on.doc").font(.system(size: 16)) }
                     .buttonStyle(.plain).help("Copy Image").disabled(image == nil)
 
+                    Button(role: .destructive) { showingDeleteAlert = true } label: { Image(systemName: "trash").font(.system(size: 16)) }
+                        .buttonStyle(.plain).help("Delete Image")
+
                     Button { NSWorkspace.shared.open(currentImageURL) } label: { Image(systemName: "arrow.up.right.square").font(.system(size: 16)) }
                         .buttonStyle(.plain).help("Open in Finder")
                 }
@@ -398,6 +402,37 @@ struct ImagePreviewView: View {
         .frame(minWidth: 1200, minHeight: 800)
         .onAppear { loadImage() }
         .onChange(of: currentIndex) { _ in resetZoom(); loadImage() }
+        .alert(isPresented: $showingDeleteAlert) {
+            Alert(
+                title: Text("Delete Image?"),
+                message: Text("This will permanently remove the image from disk. This action cannot be undone."),
+                primaryButton: .destructive(Text("Delete"), action: deleteCurrentImage),
+                secondaryButton: .cancel()
+            )
+        }
+    }
+
+    private func deleteCurrentImage() {
+        let imageURL = currentImageURL
+        
+        // Remove file from disk
+        do {
+            try FileManager.default.removeItem(at: imageURL)
+        } catch {
+            print("Error deleting image: \(error)")
+        }
+        
+        // Remove from images array
+        withAnimation {
+            images.remove(at: currentIndex)
+            
+            // Handle case when we delete the last image
+            if images.isEmpty {
+                dismiss()
+            } else if currentIndex >= images.count {
+                currentIndex = images.count - 1
+            }
+        }
     }
 
     private func goToPrevious() { guard canGoPrevious, !isTransitioning else { return }; withAnimation(.easeInOut(duration: 0.15)) { isTransitioning = true }; DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { currentIndex -= 1; withAnimation(.easeInOut(duration: 0.15)) { isTransitioning = false } } }

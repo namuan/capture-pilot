@@ -353,21 +353,7 @@ private struct TargetSourceSection: View {
                     CustomAreaEditor(captureEngine: captureEngine)
                         .transition(.opacity)
                 } else {
-                    // Fullscreen content
-                    VStack(spacing: 12) {
-                        Image(systemName: "display.2")
-                            .font(.largeTitle)
-                            .foregroundColor(.secondary)
-                        Text("Capture will include the entire screen")
-                            .font(.callout)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(height: 280)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(NSColor.textBackgroundColor).opacity(0.3))
-                    )
+                    FullscreenPreview()
                 }
             }
             .frame(maxWidth: .infinity)
@@ -1061,6 +1047,182 @@ private struct ShortcutsSection: View {
                 }
             }
         }
+    }
+}
+
+private struct FullscreenPreview: View {
+    @State private var screens: [ScreenInfo] = []
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            if screens.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "display.2")
+                        .font(.largeTitle)
+                        .foregroundColor(.secondary)
+                    Text("No displays detected")
+                        .font(.callout)
+                        .foregroundColor(.secondary)
+                }
+                .frame(height: 280)
+                .frame(maxWidth: .infinity)
+            } else {
+                GeometryReader { geometry in
+                    let layout = calculateLayout(in: geometry.size)
+                    
+                    ZStack {
+                        ForEach(layout.screenRects.indices, id: \.self) { index in
+                            let screenRect = layout.screenRects[index]
+                            let screen = screens[index]
+                            
+                            MonitorPreview(
+                                screen: screen,
+                                rect: screenRect,
+                                isMain: index == layout.mainScreenIndex
+                            )
+                        }
+                    }
+                    .frame(width: layout.totalSize.width, height: layout.totalSize.height)
+                    .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+                }
+            }
+        }
+        .frame(height: 280)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(NSColor.textBackgroundColor).opacity(0.3))
+        )
+        .onAppear {
+            updateScreens()
+        }
+    }
+    
+    private func updateScreens() {
+        screens = NSScreen.screens.enumerated().map { index, screen in
+            let frame = screen.frame
+            let screenName = screen.localizedName.isEmpty
+                ? (index == 0 ? "Main Display" : "Display \(index + 1)")
+                : screen.localizedName
+            return ScreenInfo(
+                id: index,
+                name: screenName,
+                width: Int(frame.width),
+                height: Int(frame.height),
+                x: Int(frame.origin.x),
+                y: Int(frame.origin.y),
+                isMain: index == 0
+            )
+        }
+    }
+    
+    private func calculateLayout(in containerSize: CGSize) -> ScreenLayout {
+        guard !screens.isEmpty else {
+            return ScreenLayout(screenRects: [], totalSize: .zero, mainScreenIndex: 0)
+        }
+        
+        let padding: CGFloat = 12
+        
+        let allX = screens.map { $0.x }
+        let allY = screens.map { $0.y }
+        let minX = allX.min() ?? 0
+        let minY = allY.min() ?? 0
+        let maxX = (screens.map { $0.x + $0.width }.max() ?? 0)
+        let maxY = (screens.map { $0.y + $0.height }.max() ?? 0)
+        
+        let virtualWidth = CGFloat(maxX - minX)
+        let virtualHeight = CGFloat(maxY - minY)
+        
+        let availableWidth = containerSize.width - padding * 2
+        let availableHeight = containerSize.height - padding * 2
+        
+        let scaleX = availableWidth / virtualWidth
+        let scaleY = availableHeight / virtualHeight
+        let scale = min(scaleX, scaleY, 1.0)
+        
+        let scaledWidth = virtualWidth * scale
+        let scaledHeight = virtualHeight * scale
+        let offsetX = (containerSize.width - scaledWidth) / 2
+        let offsetY = (containerSize.height - scaledHeight) / 2
+        
+        let screenRects: [CGRect] = screens.map { screen in
+            let scaledX = CGFloat(screen.x - minX) * scale + offsetX
+            let scaledY = CGFloat(screen.y - minY) * scale + offsetY
+            let scaledW = CGFloat(screen.width) * scale
+            let scaledH = CGFloat(screen.height) * scale
+            return CGRect(x: scaledX, y: scaledY, width: scaledW, height: scaledH)
+        }
+        
+        let mainScreenIndex = screens.firstIndex(where: { $0.isMain }) ?? 0
+        
+        return ScreenLayout(
+            screenRects: screenRects,
+            totalSize: CGSize(width: scaledWidth + padding * 2, height: scaledHeight + padding * 2),
+            mainScreenIndex: mainScreenIndex
+        )
+    }
+}
+
+private struct ScreenInfo: Identifiable {
+    let id: Int
+    let name: String
+    let width: Int
+    let height: Int
+    let x: Int
+    let y: Int
+    let isMain: Bool
+}
+
+private struct ScreenLayout {
+    let screenRects: [CGRect]
+    let totalSize: CGSize
+    let mainScreenIndex: Int
+}
+
+private struct MonitorPreview: View {
+    let screen: ScreenInfo
+    let rect: CGRect
+    let isMain: Bool
+    
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.accentColor.opacity(0.15),
+                            Color.accentColor.opacity(0.05)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(
+                    isMain ? Color.accentColor : Color.secondary.opacity(0.4),
+                    lineWidth: isMain ? 2 : 1
+                )
+            
+            VStack(spacing: 4) {
+                HStack(spacing: 4) {
+                    Image(systemName: "display")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(isMain ? .accentColor : .secondary)
+                    Text(screen.name)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(isMain ? .primary : .secondary)
+                        .lineLimit(1)
+                }
+                
+                Text("\(screen.width) × \(screen.height)")
+                    .font(.system(size: 8, weight: .regular))
+                    .foregroundColor(.secondary)
+            }
+            .padding(4)
+        }
+        .frame(width: rect.width, height: rect.height)
+        .position(x: rect.midX, y: rect.midY)
     }
 }
 

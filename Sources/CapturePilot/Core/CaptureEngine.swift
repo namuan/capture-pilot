@@ -102,12 +102,10 @@ class CaptureEngine: ObservableObject {
         timer?.invalidate()
         timer = nil
         
-        // Save session to Core Data
+         // Save session to Core Data
         if let folder = currentSessionFolder {
             let viewContext = PersistenceController.shared.container.viewContext
             let newSession = CaptureSession(context: viewContext)
-            newSession.id = UUID()
-            newSession.date = Date()
             newSession.path = folder.path
             try? viewContext.save()
         }

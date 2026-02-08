@@ -229,7 +229,7 @@ struct SessionRow: View {
             .animation(.easeInOut(duration: 0.15), value: isHover)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(session.date, style: .date)
+                Text(session.safeDate, style: .date)
                     .font(.headline)
                     .fontWeight(isActive ? .semibold : .regular)
                 Text(session.path)
@@ -290,13 +290,13 @@ struct SessionDetailView: View {
         Binding(get: { selectedImageIndex ?? 0 }, set: { selectedImageIndex = $0 })
     }
 
-    private var formattedDate: String { let f = DateFormatter(); f.dateStyle = .medium; f.timeStyle = .none; return f.string(from: session.date) }
+     private var formattedDate: String { let f = DateFormatter(); f.dateStyle = .medium; f.timeStyle = .none; return f.string(from: session.safeDate) }
 
     var body: some View {
         ScrollView {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(session.date, style: .date).font(.title2).fontWeight(.semibold)
+                    Text(session.safeDate, style: .date).font(.title2).fontWeight(.semibold)
                     Text(session.path).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
 

@@ -60,4 +60,20 @@ public class CaptureSession: NSManagedObject {
     @NSManaged public var id: UUID
     @NSManaged public var date: Date
     @NSManaged public var path: String
+    
+    // Ensures the date property always returns a valid Date
+    public var safeDate: Date {
+        return date ?? Date()
+    }
+}
+
+// Extension to provide a safe initializer
+extension CaptureSession {
+    convenience init(context: NSManagedObjectContext) {
+        let entity = NSEntityDescription.entity(forEntityName: "CaptureSession", in: context)!
+        self.init(entity: entity, insertInto: context)
+        self.id = UUID()
+        self.date = Date() // Ensure date is always initialized
+        self.path = ""
+    }
 }

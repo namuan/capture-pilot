@@ -4,6 +4,8 @@ import ApplicationServices
 import AppKit
 
 class PermissionsManager: ObservableObject {
+    static let shared = PermissionsManager()
+    
     @Published var hasScreenRecordingPermission = false
     @Published var hasAccessibilityPermission = false
     
@@ -17,10 +19,7 @@ class PermissionsManager: ObservableObject {
     }
     
     func requestScreenRecordingPermission() {
-        // Open System Settings
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-            NSWorkspace.shared.open(url)
-        }
+        CGRequestScreenCaptureAccess()
     }
     
     func requestAccessibilityPermission() {

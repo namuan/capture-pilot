@@ -43,7 +43,7 @@ if [ -f "assets/icon.png" ]; then
     ICONSET_DIR="/tmp/$APP_NAME.iconset"
     rm -rf "$ICONSET_DIR"
     mkdir -p "$ICONSET_DIR"
-    
+
     # Generate iconset from PNG (creates multiple sizes)
     sips -z 16 16     "assets/icon.png" --out "$ICONSET_DIR/icon_16x16.png" > /dev/null 2>&1
     sips -z 32 32     "assets/icon.png" --out "$ICONSET_DIR/icon_16x16@2x.png" > /dev/null 2>&1
@@ -55,7 +55,7 @@ if [ -f "assets/icon.png" ]; then
     sips -z 512 512   "assets/icon.png" --out "$ICONSET_DIR/icon_256x256@2x.png" > /dev/null 2>&1
     sips -z 512 512   "assets/icon.png" --out "$ICONSET_DIR/icon_512x512.png" > /dev/null 2>&1
     sips -z 1024 1024 "assets/icon.png" --out "$ICONSET_DIR/icon_512x512@2x.png" > /dev/null 2>&1
-    
+
     # Convert to .icns
     iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
     rm -rf "$ICONSET_DIR"
@@ -99,4 +99,5 @@ codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "Installation complete! Launch CapturePilot from $APP_BUNDLE"
 tccutil reset ScreenCapture com.example.CapturePilot
+tccutil reset Accessibility com.example.CapturePilot
 open "$APP_BUNDLE"

@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct OnboardingView: View {
-    @StateObject private var permissionsManager = PermissionsManager()
     @Binding var isOnboardingComplete: Bool
     
     var body: some View {
@@ -23,15 +22,15 @@ struct OnboardingView: View {
                 PermissionRow(
                     title: "Screen Recording",
                     description: "Required to capture screen content.",
-                    isGranted: permissionsManager.hasScreenRecordingPermission,
-                    action: permissionsManager.requestScreenRecordingPermission
+                    isGranted: PermissionsManager.shared.hasScreenRecordingPermission,
+                    action: PermissionsManager.shared.requestScreenRecordingPermission
                 )
                 
                 PermissionRow(
                     title: "Accessibility",
                     description: "Required to simulate keystrokes.",
-                    isGranted: permissionsManager.hasAccessibilityPermission,
-                    action: permissionsManager.requestAccessibilityPermission
+                    isGranted: PermissionsManager.shared.hasAccessibilityPermission,
+                    action: PermissionsManager.shared.requestAccessibilityPermission
                 )
             }
             .padding()
@@ -40,28 +39,27 @@ struct OnboardingView: View {
             
             HStack {
                 Button("Check Again") {
-                    permissionsManager.checkPermissions()
+                    PermissionsManager.shared.checkPermissions()
                 }
                 .buttonStyle(.plain)
                 .padding()
                 
                 Button("Continue") {
-                    if permissionsManager.hasScreenRecordingPermission && permissionsManager.hasAccessibilityPermission {
+                    if PermissionsManager.shared.hasScreenRecordingPermission && PermissionsManager.shared.hasAccessibilityPermission {
                         isOnboardingComplete = true
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!permissionsManager.hasScreenRecordingPermission || !permissionsManager.hasAccessibilityPermission)
+                .disabled(!PermissionsManager.shared.hasScreenRecordingPermission || !PermissionsManager.shared.hasAccessibilityPermission)
             }
         }
         .padding()
         .frame(width: 500, height: 600)
         .onAppear {
-            permissionsManager.checkPermissions()
+            PermissionsManager.shared.checkPermissions()
         }
-        // Poll for changes when window is active
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            permissionsManager.checkPermissions()
+            PermissionsManager.shared.checkPermissions()
         }
     }
 }

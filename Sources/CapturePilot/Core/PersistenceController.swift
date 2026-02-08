@@ -28,7 +28,7 @@ struct PersistenceController {
         let dateAttr = NSAttributeDescription()
         dateAttr.name = "date"
         dateAttr.attributeType = .dateAttributeType
-        dateAttr.isOptional = false
+        dateAttr.isOptional = true
         
         let pathAttr = NSAttributeDescription()
         pathAttr.name = "path"
@@ -58,7 +58,7 @@ struct PersistenceController {
 @objc(CaptureSession)
 public class CaptureSession: NSManagedObject {
     @NSManaged public var id: UUID
-    @NSManaged public var date: Date
+    @NSManaged public var date: Date?
     @NSManaged public var path: String
     
     // Ensures the date property always returns a valid Date
@@ -74,6 +74,5 @@ extension CaptureSession {
         self.init(entity: entity, insertInto: context)
         self.id = UUID()
         self.date = Date() // Ensure date is always initialized
-        self.path = ""
     }
 }

@@ -283,6 +283,7 @@ struct SessionDetailView: View {
     @State private var images: [URL] = []
     @State private var selectedImageIndex: Int? = nil
     @State private var isLoading = true
+    @StateObject private var videoExporter = VideoExporter.shared
 
     private let columns = [ GridItem(.adaptive(minimum: 160, maximum: 200), spacing: 16) ]
 
@@ -301,6 +302,33 @@ struct SessionDetailView: View {
                 }
 
                 Spacer()
+
+                HStack(spacing: 8) {
+                    if videoExporter.isExporting {
+                        VStack(spacing: 2) {
+                            ProgressView(value: videoExporter.exportProgress)
+                                .frame(width: 120)
+                            Text("\(Int(videoExporter.exportProgress * 100))%")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Button(action: { videoExporter.cancelExport() }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Button(action: { NSWorkspace.shared.open(URL(fileURLWithPath: session.path)) }) {
+                            Image(systemName: "folder")
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open Folder")
+
+                        Button(action: { videoExporter.exportSession(sessionPath: session.path) { _ in } }) {
+                            Label("Export Video", systemImage: "video")
+                        }
+                    }
+                }
             }
             .padding([.top, .horizontal])
 
@@ -321,8 +349,6 @@ struct SessionDetailView: View {
                 .padding()
             }
         }
-        // Header title is redundant with the in-view metadata; keep the
-        // navigation title empty so the window header doesn't duplicate info.
         .navigationTitle("")
         .onAppear { loadImages() }
         .onChange(of: session.path) { _ in loadImages() }

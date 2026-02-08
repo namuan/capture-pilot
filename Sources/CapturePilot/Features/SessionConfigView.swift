@@ -899,7 +899,7 @@ private struct CustomAreaEditor: View {
     
     private func calculateLayout(in containerSize: CGSize) -> ScreenLayout {
         guard !screens.isEmpty else {
-            return ScreenLayout(screenRects: [], totalSize: .zero, mainScreenIndex: 0, minX: 0, minY: 0, scale: 1)
+            return ScreenLayout(screenRects: [], totalSize: .zero, mainScreenIndex: 0, minX: 0, minY: 0, scale: 1, offsetX: 0, offsetY: 0)
         }
         
         let padding: CGFloat = 12
@@ -942,7 +942,9 @@ private struct CustomAreaEditor: View {
             mainScreenIndex: mainScreenIndex,
             minX: minX,
             minY: minY,
-            scale: scale
+            scale: scale,
+            offsetX: offsetX,
+            offsetY: offsetY
         )
     }
     
@@ -1078,10 +1080,12 @@ private struct MonitorPreviewWithSelection: View {
         let scale = layoutInfo.scale
         let minX = layoutInfo.minX
         let minY = layoutInfo.minY
+        let offsetX = layoutInfo.offsetX
+        let offsetY = layoutInfo.offsetY
         
         return CGRect(
-            x: (globalRect.origin.x - CGFloat(minX)) * scale,
-            y: (globalRect.origin.y - CGFloat(minY)) * scale,
+            x: (globalRect.origin.x - CGFloat(minX)) * scale + offsetX,
+            y: (globalRect.origin.y - CGFloat(minY)) * scale + offsetY,
             width: globalRect.width * scale,
             height: globalRect.height * scale
         )
@@ -1311,7 +1315,7 @@ private struct FullscreenPreview: View {
     
     private func calculateLayout(in containerSize: CGSize) -> ScreenLayout {
         guard !screens.isEmpty else {
-            return ScreenLayout(screenRects: [], totalSize: .zero, mainScreenIndex: 0, minX: 0, minY: 0, scale: 1)
+            return ScreenLayout(screenRects: [], totalSize: .zero, mainScreenIndex: 0, minX: 0, minY: 0, scale: 1, offsetX: 0, offsetY: 0)
         }
         
         let padding: CGFloat = 12
@@ -1354,7 +1358,9 @@ private struct FullscreenPreview: View {
             mainScreenIndex: mainScreenIndex,
             minX: minX,
             minY: minY,
-            scale: scale
+            scale: scale,
+            offsetX: offsetX,
+            offsetY: offsetY
         )
     }
 }
@@ -1376,6 +1382,8 @@ private struct ScreenLayout {
     let minX: Int
     let minY: Int
     let scale: CGFloat
+    let offsetX: CGFloat
+    let offsetY: CGFloat
 }
 
 private struct MonitorPreview: View {

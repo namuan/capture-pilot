@@ -826,39 +826,124 @@ private struct AppGridTile: View {
 private struct CustomAreaEditor: View {
     @ObservedObject var captureEngine: CaptureEngine
     @State private var isSelecting = false
+    @State private var screens: [ScreenInfo] = []
     
     var body: some View {
-        if let rect = captureEngine.captureRect {
-            VStack(spacing: 16) {
-                Button(action: startAreaSelection) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "crop")
-                        Text("Select Area")
+        VStack(spacing: 16) {
+            GeometryReader { geometry in
+                let layout = calculateLayout(in: geometry.size)
+                
+                ZStack {
+                    ForEach(layout.screenRects.indices, id: \.self) { index in
+                        let screenRect = layout.screenRects[index]
+                        let screen = screens[index]
+                        
+                        MonitorPreviewWithSelection(
+                            screen: screen,
+                            rect: screenRect,
+                            isMain: index == layout.mainScreenIndex,
+                            captureRect: captureEngine.captureRect,
+                            layoutInfo: layout
+                        )
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                }
+                .frame(width: layout.totalSize.width, height: layout.totalSize.height)
+                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+            }
+            .frame(height: 200)
+            
+            HStack(spacing: 16) {
+                coordinateField(icon: "xmark", title: "X", value: xBinding)
+                coordinateField(icon: "y", title: "Y", value: yBinding)
+                coordinateField(icon: "arrow.left.and.right", title: "W", value: widthBinding)
+                coordinateField(icon: "arrow.up.and.down", title: "H", value: heightBinding)
+                Spacer()
+                
+                Button(action: startAreaSelection) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "crop")
+                        Text("Select")
+                    }
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.small)
                 .disabled(isSelecting)
-                
-                HStack(spacing: 20) {
-                    coordinateField(icon: "xmark", title: "X:", value: xBinding(for: rect))
-                    coordinateField(icon: "y", title: "Y:", value: yBinding(for: rect))
-                    Spacer()
-                }
-                
-                HStack(spacing: 20) {
-                    coordinateField(icon: "arrow.left.and.right", title: "Width:", value: widthBinding(for: rect))
-                    coordinateField(icon: "arrow.up.and.down", title: "Height:", value: heightBinding(for: rect))
-                    Spacer()
-                }
             }
             .padding(12)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 8)
                     .fill(Color(NSColor.textBackgroundColor).opacity(0.5))
             )
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear { updateScreens() }
+    }
+    
+    private func updateScreens() {
+        screens = NSScreen.screens.enumerated().map { index, screen in
+            let frame = screen.frame
+            let screenName = screen.localizedName.isEmpty
+                ? (index == 0 ? "Main Display" : "Display \(index + 1)")
+                : screen.localizedName
+            return ScreenInfo(
+                id: index,
+                name: screenName,
+                width: Int(frame.width),
+                height: Int(frame.height),
+                x: Int(frame.origin.x),
+                y: Int(frame.origin.y),
+                isMain: index == 0
+            )
+        }
+    }
+    
+    private func calculateLayout(in containerSize: CGSize) -> ScreenLayout {
+        guard !screens.isEmpty else {
+            return ScreenLayout(screenRects: [], totalSize: .zero, mainScreenIndex: 0, minX: 0, minY: 0, scale: 1)
+        }
+        
+        let padding: CGFloat = 12
+        
+        let allX = screens.map { $0.x }
+        let allY = screens.map { $0.y }
+        let minX = allX.min() ?? 0
+        let minY = allY.min() ?? 0
+        let maxX = (screens.map { $0.x + $0.width }.max() ?? 0)
+        let maxY = (screens.map { $0.y + $0.height }.max() ?? 0)
+        
+        let virtualWidth = CGFloat(maxX - minX)
+        let virtualHeight = CGFloat(maxY - minY)
+        
+        let availableWidth = containerSize.width - padding * 2
+        let availableHeight = containerSize.height - padding * 2
+        
+        let scaleX = availableWidth / virtualWidth
+        let scaleY = availableHeight / virtualHeight
+        let scale = min(scaleX, scaleY, 1.0)
+        
+        let scaledWidth = virtualWidth * scale
+        let scaledHeight = virtualHeight * scale
+        let offsetX = (containerSize.width - scaledWidth) / 2
+        let offsetY = (containerSize.height - scaledHeight) / 2
+        
+        let screenRects: [CGRect] = screens.map { screen in
+            let scaledX = CGFloat(screen.x - minX) * scale + offsetX
+            let scaledY = CGFloat(screen.y - minY) * scale + offsetY
+            let scaledW = CGFloat(screen.width) * scale
+            let scaledH = CGFloat(screen.height) * scale
+            return CGRect(x: scaledX, y: scaledY, width: scaledW, height: scaledH)
+        }
+        
+        let mainScreenIndex = screens.firstIndex(where: { $0.isMain }) ?? 0
+        
+        return ScreenLayout(
+            screenRects: screenRects,
+            totalSize: CGSize(width: scaledWidth + padding * 2, height: scaledHeight + padding * 2),
+            mainScreenIndex: mainScreenIndex,
+            minX: minX,
+            minY: minY,
+            scale: scale
+        )
     }
     
     private func startAreaSelection() {
@@ -872,47 +957,133 @@ private struct CustomAreaEditor: View {
     }
     
     private func coordinateField(icon: String, title: String, value: Binding<Double>) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.caption)
-                    .foregroundColor(.accentColor)
-                Text(title)
-                    .font(.callout)
-                    .fontWeight(.medium)
-            }
-            TextField("", value: value, format: .number)
-                .frame(width: 100)
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundColor(.accentColor)
+            Text(title)
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.secondary)
+            TextField("", value: value, format: .number.precision(.fractionLength(2)))
                 .textFieldStyle(.roundedBorder)
-                .padding(.horizontal, 4)
+                .frame(width: 70)
+                .controlSize(.small)
         }
+        .alignmentGuide(.firstTextBaseline) { $0[.firstTextBaseline] }
     }
     
-    private func xBinding(for rect: CGRect) -> Binding<Double> {
+    private var xBinding: Binding<Double> {
         Binding(
-            get: { Double(rect.origin.x) },
+            get: { Double(captureEngine.captureRect?.origin.x ?? 0) },
             set: { captureEngine.captureRect?.origin.x = CGFloat($0) }
         )
     }
     
-    private func yBinding(for rect: CGRect) -> Binding<Double> {
+    private var yBinding: Binding<Double> {
         Binding(
-            get: { Double(rect.origin.y) },
+            get: { Double(captureEngine.captureRect?.origin.y ?? 0) },
             set: { captureEngine.captureRect?.origin.y = CGFloat($0) }
         )
     }
     
-    private func widthBinding(for rect: CGRect) -> Binding<Double> {
+    private var widthBinding: Binding<Double> {
         Binding(
-            get: { Double(rect.size.width) },
+            get: { Double(captureEngine.captureRect?.size.width ?? 0) },
             set: { captureEngine.captureRect?.size.width = CGFloat($0) }
         )
     }
     
-    private func heightBinding(for rect: CGRect) -> Binding<Double> {
+    private var heightBinding: Binding<Double> {
         Binding(
-            get: { Double(rect.size.height) },
+            get: { Double(captureEngine.captureRect?.size.height ?? 0) },
             set: { captureEngine.captureRect?.size.height = CGFloat($0) }
+        )
+    }
+}
+
+private struct MonitorPreviewWithSelection: View {
+    let screen: ScreenInfo
+    let rect: CGRect
+    let isMain: Bool
+    let captureRect: CGRect?
+    let layoutInfo: ScreenLayout
+    
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.accentColor.opacity(0.15),
+                            Color.accentColor.opacity(0.05)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(
+                    isMain ? Color.accentColor : Color.secondary.opacity(0.4),
+                    lineWidth: isMain ? 2 : 1
+                )
+            
+            VStack(spacing: 4) {
+                HStack(spacing: 4) {
+                    Image(systemName: "display")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(isMain ? .accentColor : .secondary)
+                    Text(screen.name)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(isMain ? .primary : .secondary)
+                        .lineLimit(1)
+                }
+                
+                Text("\(screen.width) × \(screen.height)")
+                    .font(.system(size: 8, weight: .regular))
+                    .foregroundColor(.secondary)
+            }
+            .padding(4)
+            
+            if let captureRect = captureRect {
+                let scaledSelection = scaleRect(captureRect)
+                
+                if rect.intersects(scaledSelection) {
+                    let intersection = rect.intersection(scaledSelection)
+                    let localRect = CGRect(
+                        x: intersection.minX - rect.minX,
+                        y: intersection.minY - rect.minY,
+                        width: intersection.width,
+                        height: intersection.height
+                    )
+                    
+                    Rectangle()
+                        .fill(Color.accentColor.opacity(0.3))
+                        .frame(width: localRect.width, height: localRect.height)
+                        .position(x: localRect.midX, y: localRect.midY)
+                    
+                    Rectangle()
+                        .stroke(Color.accentColor, lineWidth: 1.5)
+                        .frame(width: localRect.width, height: localRect.height)
+                        .position(x: localRect.midX, y: localRect.midY)
+                }
+            }
+        }
+        .frame(width: rect.width, height: rect.height)
+        .position(x: rect.midX, y: rect.midY)
+    }
+    
+    private func scaleRect(_ globalRect: CGRect) -> CGRect {
+        let scale = layoutInfo.scale
+        let minX = layoutInfo.minX
+        let minY = layoutInfo.minY
+        
+        return CGRect(
+            x: (globalRect.origin.x - CGFloat(minX)) * scale,
+            y: (globalRect.origin.y - CGFloat(minY)) * scale,
+            width: globalRect.width * scale,
+            height: globalRect.height * scale
         )
     }
 }
@@ -1140,7 +1311,7 @@ private struct FullscreenPreview: View {
     
     private func calculateLayout(in containerSize: CGSize) -> ScreenLayout {
         guard !screens.isEmpty else {
-            return ScreenLayout(screenRects: [], totalSize: .zero, mainScreenIndex: 0)
+            return ScreenLayout(screenRects: [], totalSize: .zero, mainScreenIndex: 0, minX: 0, minY: 0, scale: 1)
         }
         
         let padding: CGFloat = 12
@@ -1180,7 +1351,10 @@ private struct FullscreenPreview: View {
         return ScreenLayout(
             screenRects: screenRects,
             totalSize: CGSize(width: scaledWidth + padding * 2, height: scaledHeight + padding * 2),
-            mainScreenIndex: mainScreenIndex
+            mainScreenIndex: mainScreenIndex,
+            minX: minX,
+            minY: minY,
+            scale: scale
         )
     }
 }
@@ -1199,6 +1373,9 @@ private struct ScreenLayout {
     let screenRects: [CGRect]
     let totalSize: CGSize
     let mainScreenIndex: Int
+    let minX: Int
+    let minY: Int
+    let scale: CGFloat
 }
 
 private struct MonitorPreview: View {

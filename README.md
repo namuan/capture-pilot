@@ -2,7 +2,7 @@
 
 **Hands-Free Screenshots: Fly Through Your Workflow.**
 
-Tired of manually taking endless screenshots? Let CapturePilot automate it for you. This powerful Mac app sets intervals, simulates keystrokes, and captures everything from full screens to custom areas—while you focus on real work. Archive books, webcomics, manga, or batch-process websites into timelapse videos. Pay once, use forever.
+Tired of manually taking endless screenshots? Let CapturePilot automate it for you. This powerful Mac app sets intervals, simulates keystrokes, and captures everything from full screens to custom areas—while you focus on real work. Archive books, webcomics, manga, or batch-process websites into timelapse videos.
 
 ![](assets/intro.png)
 

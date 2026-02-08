@@ -847,8 +847,8 @@ private struct CustomAreaEditor: View {
                         )
                     }
                 }
-                .frame(width: layout.totalSize.width, height: layout.totalSize.height)
-                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+                 .frame(width: layout.totalSize.width, height: layout.totalSize.height)
+                 .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
             }
             .frame(height: 200)
             
@@ -897,7 +897,7 @@ private struct CustomAreaEditor: View {
         }
     }
     
-    private func calculateLayout(in containerSize: CGSize) -> ScreenLayout {
+     private func calculateLayout(in containerSize: CGSize) -> ScreenLayout {
         guard !screens.isEmpty else {
             return ScreenLayout(screenRects: [], totalSize: .zero, mainScreenIndex: 0, minX: 0, minY: 0, scale: 1, offsetX: 0, offsetY: 0)
         }
@@ -938,7 +938,7 @@ private struct CustomAreaEditor: View {
         
         return ScreenLayout(
             screenRects: screenRects,
-            totalSize: CGSize(width: scaledWidth + padding * 2, height: scaledHeight + padding * 2),
+            totalSize: CGSize(width: containerSize.width, height: containerSize.height),
             mainScreenIndex: mainScreenIndex,
             minX: minX,
             minY: minY,
@@ -1313,7 +1313,7 @@ private struct FullscreenPreview: View {
         }
     }
     
-    private func calculateLayout(in containerSize: CGSize) -> ScreenLayout {
+     private func calculateLayout(in containerSize: CGSize) -> ScreenLayout {
         guard !screens.isEmpty else {
             return ScreenLayout(screenRects: [], totalSize: .zero, mainScreenIndex: 0, minX: 0, minY: 0, scale: 1, offsetX: 0, offsetY: 0)
         }
@@ -1354,7 +1354,7 @@ private struct FullscreenPreview: View {
         
         return ScreenLayout(
             screenRects: screenRects,
-            totalSize: CGSize(width: scaledWidth + padding * 2, height: scaledHeight + padding * 2),
+            totalSize: CGSize(width: containerSize.width, height: containerSize.height),
             mainScreenIndex: mainScreenIndex,
             minX: minX,
             minY: minY,

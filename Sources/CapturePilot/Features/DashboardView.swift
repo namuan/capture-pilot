@@ -31,7 +31,8 @@ struct DashboardView: View {
                         SessionRow(session: session,
                                    isSelected: selectedSessions.contains(session.id),
                                    isMultiSelectMode: isMultiSelectMode,
-                                   isActive: selectedSession?.objectID == session.objectID)
+                                   isActive: selectedSession?.objectID == session.objectID,
+                                   onDelete: { sessionsToDelete = [session]; showingDeleteAlert = true })
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 if isMultiSelectMode {
@@ -180,35 +181,52 @@ struct SessionRow: View {
     let isSelected: Bool
     let isMultiSelectMode: Bool
     let isActive: Bool
-    // This row is animated when active so the list thumbnail remains visible
+    let onDelete: () -> Void
 
     @State private var thumbnail: NSImage? = nil
     @State private var imageCount: Int? = nil
     @State private var isHover = false
 
+    private var thumbnailView: some View {
+        Group {
+            if let thumb = thumbnail {
+                Image(nsImage: thumb)
+                    .resizable()
+                    .scaledToFill()
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            } else {
+                RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.08))
+                    .overlay(Image(systemName: "photo").font(.system(size: 14, weight: .semibold)).foregroundColor(.secondary))
+            }
+        }
+        .frame(width: 72, height: 48)
+        .clipped()
+    }
+    
+    private var deleteButton: some View {
+        Button(action: onDelete) {
+            Image(systemName: "trash")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 20, height: 20)
+                .background(Color.red.opacity(0.85))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .transition(.scale.combined(with: .opacity))
+    }
+
     var body: some View {
         HStack(spacing: 12) {
-            // Thumbnail: remove decorative gradient border and show the
-            // image edge-to-edge inside a rounded rect. Keep the hover
-            // shadow but avoid an extra framed border around the image.
-            Group {
-                if let thumb = thumbnail {
-                    Image(nsImage: thumb)
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                } else {
-                    // lightweight placeholder background so rows don't jump
-                    RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.08))
-                        .overlay(Image(systemName: "photo").font(.system(size: 14, weight: .semibold)).foregroundColor(.secondary))
+            ZStack {
+                thumbnailView
+                if isHover && !isMultiSelectMode {
+                    deleteButton
                 }
             }
-            .frame(width: 72, height: 48)
-            .clipped()
             .shadow(color: isHover ? Color.black.opacity(0.25) : Color.black.opacity(0.12), radius: isHover ? 8 : 4, x: 0, y: isHover ? 6 : 2)
-            // subtle list-side animation when the row becomes active (selection)
-            // Keep the thumbnail fully opaque when active — do not fade it.
             .animation(.easeInOut(duration: 0.18), value: isActive)
+            .animation(.easeInOut(duration: 0.15), value: isHover)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(session.date, style: .date)

@@ -825,10 +825,22 @@ private struct AppGridTile: View {
 
 private struct CustomAreaEditor: View {
     @ObservedObject var captureEngine: CaptureEngine
+    @State private var isSelecting = false
     
     var body: some View {
         if let rect = captureEngine.captureRect {
             VStack(spacing: 16) {
+                Button(action: startAreaSelection) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "crop")
+                        Text("Select Area")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isSelecting)
+                
                 HStack(spacing: 20) {
                     coordinateField(icon: "xmark", title: "X:", value: xBinding(for: rect))
                     coordinateField(icon: "y", title: "Y:", value: yBinding(for: rect))
@@ -846,6 +858,16 @@ private struct CustomAreaEditor: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color(NSColor.textBackgroundColor).opacity(0.5))
             )
+        }
+    }
+    
+    private func startAreaSelection() {
+        isSelecting = true
+        AreaSelectionWindow.shared.selectArea { selectedRect in
+            if let selectedRect = selectedRect {
+                captureEngine.captureRect = selectedRect
+            }
+            isSelecting = false
         }
     }
     

@@ -8,7 +8,8 @@ final class ImageCache {
     static let shared = ImageCache()
 
     private let cache = NSCache<NSString, AnyObject>()
-    private let queue = DispatchQueue(label: "capturepilot.imagecache", qos: .userInitiated, attributes: .concurrent)
+    private let queue = DispatchQueue(label: "capturepilot.imagecache", qos: .userInitiated)
+    private let concurrencySemaphore = DispatchSemaphore(value: 4)
 
     private init() {
         cache.countLimit = 500
@@ -20,7 +21,7 @@ final class ImageCache {
     }
 
     func store(_ image: NSImage, forKey key: String) {
-        let cost = Int((image.representations.first?.pixelsHigh ?? 0) * (image.representations.first?.pixelsWide ?? 0) / 1024)
+        let cost = Int((image.representations.first?.pixelsHigh ?? 0) * (image.representations.first?.pixelsWide ?? 0) * 4)
         cache.setObject(image, forKey: key as NSString, cost: cost)
     }
 
@@ -32,6 +33,9 @@ final class ImageCache {
         }
 
         queue.async {
+            self.concurrencySemaphore.wait()
+            defer { self.concurrencySemaphore.signal() }
+            
             guard let img = NSImage(contentsOf: url) else {
                 DispatchQueue.main.async { completion(nil) }
                 return
@@ -51,6 +55,9 @@ final class ImageCache {
 
     func loadFirstImage(in directory: URL, targetSize: NSSize? = nil, completion: @escaping (Int, NSImage?) -> Void) {
         queue.async {
+            self.concurrencySemaphore.wait()
+            defer { self.concurrencySemaphore.signal() }
+            
             let fm = FileManager.default
             guard let contents = try? fm.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else {
                 DispatchQueue.main.async { completion(0, nil) }

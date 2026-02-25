@@ -279,6 +279,43 @@ private struct CaptureSettingsSection: View {
                     .frame(maxWidth: .infinity)
                     .buttonStyle(.bordered)
                 }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .center, spacing: 8) {
+                        Image(systemName: "square.stack.3d.down.right.fill")
+                            .foregroundColor(.accentColor)
+                            .frame(width: 24)
+
+                        Toggle("Near-identical mode", isOn: $captureEngine.nearIdenticalModeEnabled)
+                            .toggleStyle(.switch)
+
+                        Spacer()
+                    }
+
+                    if captureEngine.nearIdenticalModeEnabled {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 8) {
+                                Text("Pixel threshold")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+
+                                Slider(value: $captureEngine.nearIdenticalPixelThreshold, in: 0...0.10, step: 0.001)
+
+                                Text("\(captureEngine.nearIdenticalPixelThreshold * 100, specifier: "%.1f")%")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 45, alignment: .trailing)
+                            }
+
+                            Text("Skips saving frames when changed pixels stay below this threshold.")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.leading, 32)
+                    }
+                }
             }
         }
     }

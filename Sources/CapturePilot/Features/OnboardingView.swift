@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Binding var isOnboardingComplete: Bool
+    @ObservedObject private var permissionsManager = PermissionsManager.shared
     
     var body: some View {
         VStack(spacing: 30) {
@@ -22,15 +23,15 @@ struct OnboardingView: View {
                 PermissionRow(
                     title: "Screen Recording",
                     description: "Required to capture screen content.",
-                    isGranted: PermissionsManager.shared.hasScreenRecordingPermission,
-                    action: PermissionsManager.shared.requestScreenRecordingPermission
+                    isGranted: permissionsManager.hasScreenRecordingPermission,
+                    action: permissionsManager.requestScreenRecordingPermission
                 )
                 
                 PermissionRow(
                     title: "Accessibility",
                     description: "Required to simulate keystrokes.",
-                    isGranted: PermissionsManager.shared.hasAccessibilityPermission,
-                    action: PermissionsManager.shared.requestAccessibilityPermission
+                    isGranted: permissionsManager.hasAccessibilityPermission,
+                    action: permissionsManager.requestAccessibilityPermission
                 )
             }
             .padding()
@@ -39,27 +40,33 @@ struct OnboardingView: View {
             
             HStack {
                 Button("Check Again") {
-                    PermissionsManager.shared.checkPermissions()
+                    permissionsManager.checkPermissions()
+                    if permissionsManager.hasScreenRecordingPermission && permissionsManager.hasAccessibilityPermission {
+                        isOnboardingComplete = true
+                    }
                 }
                 .buttonStyle(.plain)
                 .padding()
                 
                 Button("Continue") {
-                    if PermissionsManager.shared.hasScreenRecordingPermission && PermissionsManager.shared.hasAccessibilityPermission {
+                    if permissionsManager.hasScreenRecordingPermission && permissionsManager.hasAccessibilityPermission {
                         isOnboardingComplete = true
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!PermissionsManager.shared.hasScreenRecordingPermission || !PermissionsManager.shared.hasAccessibilityPermission)
+                .disabled(!permissionsManager.hasScreenRecordingPermission || !permissionsManager.hasAccessibilityPermission)
             }
         }
         .padding()
         .frame(width: 500, height: 600)
         .onAppear {
-            PermissionsManager.shared.checkPermissions()
+            permissionsManager.checkPermissions()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            PermissionsManager.shared.checkPermissions()
+            permissionsManager.checkPermissions()
+            if permissionsManager.hasScreenRecordingPermission && permissionsManager.hasAccessibilityPermission {
+                isOnboardingComplete = true
+            }
         }
     }
 }

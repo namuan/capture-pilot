@@ -38,10 +38,32 @@ class CaptureEngine: ObservableObject {
     private let automationEngine = AutomationEngine()
     private let windowManager = WindowManager.shared
     private let menuBarManager = MenuBarManager.shared
+    private var screenLockObserver: NSObjectProtocol?
+    private var screenUnlockObserver: NSObjectProtocol?
+    private var machineWillSleepObserver: NSObjectProtocol?
+    private var machineDidWakeObserver: NSObjectProtocol?
+    private var isScreenLocked = false
+    private var isMachineAsleep = false
     
     private init() {
         createSaveDirectory()
         setupMenuBar()
+        setupSystemStateObservers()
+    }
+
+    deinit {
+        if let observer = screenLockObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+        }
+        if let observer = screenUnlockObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+        }
+        if let observer = machineWillSleepObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
+        if let observer = machineDidWakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+        }
     }
     
     private func setupMenuBar() {
@@ -53,6 +75,78 @@ class CaptureEngine: ObservableObject {
                 WindowManager.shared.showWindow()
             }
         )
+    }
+
+    private func setupSystemStateObservers() {
+        let distributedCenter = DistributedNotificationCenter.default()
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+
+        screenLockObserver = distributedCenter.addObserver(
+            forName: Notification.Name("com.apple.screenIsLocked"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.isScreenLocked = true
+            self?.updateCaptureStateForSystemEvents()
+        }
+
+        screenUnlockObserver = distributedCenter.addObserver(
+            forName: Notification.Name("com.apple.screenIsUnlocked"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.isScreenLocked = false
+            self?.updateCaptureStateForSystemEvents()
+        }
+
+        machineWillSleepObserver = workspaceCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.isMachineAsleep = true
+            self?.updateCaptureStateForSystemEvents()
+        }
+
+        machineDidWakeObserver = workspaceCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.isMachineAsleep = false
+            self?.updateCaptureStateForSystemEvents()
+        }
+    }
+
+    private func updateCaptureStateForSystemEvents() {
+        guard isCapturing else { return }
+
+        if isScreenLocked || isMachineAsleep {
+            pauseCaptureTimer()
+            return
+        }
+
+        resumeCaptureTimerIfNeeded()
+    }
+
+    private func pauseCaptureTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func resumeCaptureTimerIfNeeded() {
+        guard timer == nil else { return }
+
+        capture()
+        performAutomation()
+        startCaptureTimer()
+    }
+
+    private func startCaptureTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            self?.capture()
+            self?.performAutomation()
+        }
     }
     
     private func createSaveDirectory() {
@@ -91,10 +185,7 @@ class CaptureEngine: ObservableObject {
         performAutomation()
         
         // Start timer
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            self?.capture()
-            self?.performAutomation()
-        }
+        startCaptureTimer()
     }
     
     func stopCapture() {

@@ -2,6 +2,7 @@ import Foundation
 import CoreGraphics
 import AppKit
 import UniformTypeIdentifiers
+import CryptoKit
 
 class CaptureEngine: ObservableObject {
     static let shared = CaptureEngine()
@@ -12,6 +13,7 @@ class CaptureEngine: ObservableObject {
     
     private var timer: Timer?
     private var sessionFolder: URL?
+    private var lastSavedCaptureHash: Data?
     
     @Published var currentSessionFolder: URL?
     
@@ -176,6 +178,7 @@ class CaptureEngine: ObservableObject {
         
         self.currentSessionFolder = sessionURL
         self.sessionFolder = sessionURL
+        self.lastSavedCaptureHash = nil
         
         isCapturing = true
         captureCount = 0
@@ -192,6 +195,7 @@ class CaptureEngine: ObservableObject {
         isCapturing = false
         timer?.invalidate()
         timer = nil
+        lastSavedCaptureHash = nil
         
          // Save session to Core Data
         if let folder = currentSessionFolder {
@@ -263,27 +267,38 @@ class CaptureEngine: ObservableObject {
         let nsImage = NSImage(cgImage: finalImage, size: NSSize(width: finalImage.width, height: finalImage.height))
         DispatchQueue.main.async {
             self.lastCapturedImage = nsImage
-            self.captureCount += 1
-            self.menuBarManager.updateCaptureCount(self.captureCount)
         }
         
         // Save to disk
-        saveImage(finalImage)
+        if saveImage(finalImage) {
+            DispatchQueue.main.async {
+                self.captureCount += 1
+                self.menuBarManager.updateCaptureCount(self.captureCount)
+            }
+        }
     }
     
-    private func saveImage(_ image: CGImage) {
-        guard let sessionFolder = sessionFolder else { return }
+    private func saveImage(_ image: CGImage) -> Bool {
+        guard let sessionFolder = sessionFolder else { return false }
         
         let filename = "Capture_\(String(format: "%04d", captureCount)).png"
         let fileURL = sessionFolder.appendingPathComponent(filename)
         
         let bitmapRep = NSBitmapImageRep(cgImage: image)
-        guard let data = bitmapRep.representation(using: .png, properties: [:]) else { return }
+        guard let data = bitmapRep.representation(using: .png, properties: [:]) else { return false }
+
+        let currentHash = Data(SHA256.hash(data: data))
+        if lastSavedCaptureHash == currentHash {
+            return false
+        }
         
         do {
             try data.write(to: fileURL)
+            lastSavedCaptureHash = currentHash
+            return true
         } catch {
             print("Failed to save image: \(error)")
+            return false
         }
     }
 }
